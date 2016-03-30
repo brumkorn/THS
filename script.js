@@ -1,60 +1,53 @@
 ;(function() {
     "use dtrict";
+    createTable(10, 10);
 
-    let table = document.getElementById("table");
-    
-
-    addHeader(15);
-    addRows(10);
-
-    /*Create header for the table with editable quontity of columns
+    /*Create table with speifying number of columns and rows.
+    *Table first row is tHead with column naming.
+    *Table first column is header with row index.
+    *Other table body consists of cells with input tags.
     *
-    *@param quontity - integer number of columns
+    *Each input tag have ID wich consists of column letter and row index.
     *
+    *@param columns - integer number of columns
+    *@param rows - integer number of rows
     */
-    function addHeader(quontity) {
+
+    function createTable(columns, rows) {
+        let table = document.getElementById("table");
         let header = table.createTHead();
         header.id = "header";
-        let row = header.insertRow(-1);
-        for (let i = 0; i <= quontity; i++) {
-            let cell;
+        let body = table.appendChild( document.createElement("tbody") );
+        let cell;
 
+        for (let i = 0; i <= rows; i++) {
+            let row;
+            
             if (i === 0) {
-                row.insertCell(i);
-                continue;
+                row = header.insertRow(-1);
+            } else {
+                row = body.insertRow(-1);
             }
 
-            cell = row.insertCell(i);
-            cell.innerHTML = String.fromCharCode("A".charCodeAt(0) + i - 1);
-        }
-    }
-
-    /*Create rows by speify needed number
-    *
-    *@param quontity - integer number of rows
-    *
-    */
-    function addRows(quontity) {
-        let body = table.appendChild( document.createElement("tbody") );
-        let columns = document.getElementById("header").firstChild;
-        columns = columns.childElementCount - 1;
-
-        for (let i = 0; i < quontity; i++) {
-            let row = body.insertRow(-1);
-
             for (let j = 0; j <= columns; j++) {
-                let cell;
+                let cell = row.insertCell(-1);
+                let letter = String.fromCharCode("A".charCodeAt(0) + j - 1);
+
+                if (i === 0 && j === 0) {
+                continue;
+                }
 
                 if (j === 0) {
-                    let cell = row.insertCell(j);
-                    cell.innerHTML = i+1;
+                    cell.innerHTML = i;
                     continue;
                 }
 
-                cell = row.insertCell(j);
-                cell.innerHTML = "<input type='text'>";
+                if (i === 0) {
+                    cell.innerHTML = letter;
+                } else {
+                    cell.innerHTML = "<input id=" + letter + (i) + " type='text'>";
+                }
             }
         }
     }
-
 })();
