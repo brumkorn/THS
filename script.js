@@ -7,7 +7,11 @@
     addHeader(15);
     addRows(10);
 
-    /*Create header for the table*/
+    /*Create header for the table with editable quontity of columns
+    *
+    *@param quontity - integer number of columns
+    *
+    */
     function addHeader(quontity) {
         let header = table.createTHead();
         header.id = "header";
@@ -25,6 +29,11 @@
         }
     }
 
+    /*Create rows by speify needed number
+    *
+    *@param quontity - integer number of rows
+    *
+    */
     function addRows(quontity) {
         let body = table.appendChild( document.createElement("tbody") );
         let columns = document.getElementById("header").firstChild;
