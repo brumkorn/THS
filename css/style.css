@@ -4,7 +4,6 @@ html,body {
     background-color: white;
     margin: auto;
     height: 100%;
-    z-index: 1;
 }
 
 *, *:before, *:after {
@@ -14,53 +13,83 @@ html,body {
 /*Globals*/
 
 .wrapper {
-    position: relative;
-    z-index: 0;
     margin:auto;
     height: inherit;
+    overflow-y: hidden;
 }
 
+.main {
+    width: 100%;
+}
+
+tbody {
+    display: block;
+    overflow: scroll;
+    width: 100%;
+    height: 670px;
+}
+
+thead {
+    display: block;
+    text-align: center;
+    width: 100%;
+    background-color: #f1f1f1;
+}
 
 table {
-    position: relative;
-    top: 124px;
-    overflow: inherit;
+    margin-top:100px;
+    display: inline-block;
     margin:auto;
     border-collapse: collapse;
-    z-index: 
 }
-
-select {
-    margin-left:1%;
-}
-
 
 /*Column and Row headings*/
 
-.headtoolbar {
-    display: block;
-    color: black;
+.tools-wraper {
     position: fixed;
-    height: 100px;
-    width: 100%
-    z-index: 999;
-
+    top: 0;
+    z-index: 2;
+    display: block;
+    width: 100%;
 }
+
+.menu-bar {
+    background-color:  #f1f1f1;
+    height: 20px;
+    display: inherit;
+}
+
+.tool-bar {
+    height: 50px;
+    background-color: #f1f1f1;
+    display: inherit;
+}
+
+.formulas {
+    height: 30px;
+    background-color: white;
+    display: inherit;
+}
+
 .bookmarks {
     position:fixed;
     bottom: 0px;
     float: left;
 }
-thead {
-    margin-top: 0px;
-    position: fixed;
-    top:100px;
-    text-align: center;
+
+.footter-toolbar {
+    position:fixed;
+    bottom: 0px;
+    display: block;
+    width: 100%;
+    height: 40px;
     background-color: #f1f1f1;
 }
 
+
 td:first-child {
     max-width:40px;
+    position:relative;
 }
 
 tbody td:first-child {
@@ -81,23 +110,24 @@ td {
 
 }
 
+/*
 input {
     margin: 0;
     padding:0 2px;
     height: 100%;
     width: 100%;
     border: 0px;
-    box-sizing: border-box;
-     -webkit-box-sizing:border-box;
-     -moz-box-sizing: border-box;
 }
+*/
 
+/*
 input:focus {
     outline-offset: -1px;
     outline-style: solid;
     outline-width: 2px;
     outline-color: #4C8EFA;
 }
+*/
 
 
 

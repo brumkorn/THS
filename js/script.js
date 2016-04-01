@@ -14,14 +14,13 @@
     */
 
     function createTable(columns, rows) {
-        let table = document.getElementById("table");
-        let header = table.createTHead();
+        var table = document.getElementById("table");
+        var header = table.createTHead();
         header.id = "header";
-        let body = table.appendChild( document.createElement("tbody") );
-        let cell;
+        var body = table.appendChild( document.createElement("tbody") );
 
-        for (let i = 0; i <= rows; i++) {
-            let row;
+        for (var i = 0; i <= rows; i++) {
+            var row;
             
             if (i === 0) {
                 row = header.insertRow(-1);
@@ -29,9 +28,9 @@
                 row = body.insertRow(-1);
             }
 
-            for (let j = 0; j <= columns; j++) {
-                let cell = row.insertCell(-1);
-                let letter = String.fromCharCode("A".charCodeAt(0) + j - 1);
+            for (var j = 0; j <= columns; j++) {
+                var cell = row.insertCell(-1);
+                var letter = String.fromCharCode("A".charCodeAt(0) + j - 1);
 
                 if (i === 0 && j === 0) {
                 continue;
@@ -50,4 +49,5 @@
             }
         }
     }
+
 })();
