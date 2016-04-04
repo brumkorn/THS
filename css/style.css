@@ -1,16 +1,19 @@
+/*Globals*/
+
+
 /* apply an optimized natural box layout model*/
+
 html,body {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
     box-sizing: border-box;
-    background-color: white;
     margin: auto;
     height: 100%;
 }
 
-*, *:before, *:after {
+*, *::before, *::after {
   box-sizing: inherit;
 }
-
-/*Globals*/
 
 .wrapper {
     margin:auto;
@@ -18,15 +21,80 @@ html,body {
     overflow-y: hidden;
 }
 
-.main {
+/*Column and Row headings*/
+
+.tools-wraper {
+    position: fixed;
+    top: 0;
+    z-index: 2;
+    display: block;
     width: 100%;
+}
+
+.menu-bar {
+    height: 20px;
+    display: inherit;
+}
+
+.tool-bar {
+
+    height: 60px;
+    display: inherit;
+}
+
+.formulas {
+    height: 20px;
+    box-shadow: inset 5px black;
+    background-color: white;
+    display: inherit;
+}
+
+.bookmarks {
+    position:fixed;
+    bottom: 17px;
+    float: left;
+}
+
+.footer-toolbar {
+    position:fixed;
+    bottom: 17px;
+    width: 100%;
+    height: 40px;
+    z-index: 99;
+}
+
+/*Table*/
+
+td:first-child {
+    max-width:40px;
+    position:relative;
+    background-color: #f1f1f1;
+
+    text-align: center;
+}
+
+thead td {
+     background-color: #f1f1f1;
+}
+
+td {
+    font-size: 11px;
+    height: 24px;
+    min-width: 100px;
+    width: 100px;
+    border: solid 1px #c0c0c0;
+    background-color: white;
+
+    padding: 0;
+    margin: 0;
+
 }
 
 tbody {
     display: block;
-    overflow: scroll;
     width: 100%;
     height: 670px;
+    overflow: scroll;
 }
 
 thead {
@@ -43,73 +111,11 @@ table {
     border-collapse: collapse;
 }
 
-/*Column and Row headings*/
-
-.tools-wraper {
-    position: fixed;
-    top: 0;
-    z-index: 2;
-    display: block;
+.main {
     width: 100%;
-}
-
-.menu-bar {
-    background-color:  #f1f1f1;
-    height: 20px;
-    display: inherit;
-}
-
-.tool-bar {
-    height: 50px;
-    background-color: #f1f1f1;
-    display: inherit;
-}
-
-.formulas {
-    height: 30px;
-    background-color: white;
-    display: inherit;
-}
-
-.bookmarks {
-    position:fixed;
-    bottom: 0px;
-    float: left;
-}
-
-.footter-toolbar {
-    position:fixed;
-    bottom: 0px;
-    display: block;
-    width: 100%;
-    height: 40px;
-    background-color: #f1f1f1;
-}
-
-
-td:first-child {
-    max-width:40px;
-    position:relative;
-}
-
-tbody td:first-child {
-    background-color: #f1f1f1;
-    text-align: center;
-}
-
-/*Main*/
-td {
-    font-size: 11px;
-    height: 24px;
-    min-width: 100px;
-    width: 100px;
-    border: solid 1px #c0c0c0;
-
-    padding: 0;
-    margin: 0;
+    margin-top: 100px;
 
 }
-
 /*
 input {
     margin: 0;
@@ -130,4 +136,17 @@ input:focus {
 */
 
 
-
+/*Additions*/
+.gradient {
+    background-color: #6d695c;
+    background-image:
+    repeating-linear-gradient(120deg, rgba(255,255,255,.1), 
+        rgba(255,255,255,.1) 1px, transparent 1px, transparent 60px),
+    repeating-linear-gradient(60deg, rgba(255,255,255,.1), 
+        rgba(255,255,255,.1) 1px, transparent 1px, transparent 60px),
+    linear-gradient(60deg, rgba(0,0,0,.1) 25%, transparent 25%, 
+        transparent 75%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1)),
+    linear-gradient(120deg, rgba(0,0,0,.1) 25%, transparent 25%, 
+        transparent 75%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1));
+    background-size: 70px 120px;
+}
