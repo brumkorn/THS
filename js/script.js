@@ -17,6 +17,8 @@
     loadData();
     enterData();
 
+
+
     /*
     *Create table with speifying number of columns and rows.
     *Table first row is tHead with column naming.
@@ -98,7 +100,7 @@
 
         function invokeInput(e) {
             var input; 
-            var backspace = 8;
+            // var backspace = 8;
             var storageValue = localStorage[e.target.id] || "";
 
             if ( e.target.id.startsWith("row-head") 
@@ -125,6 +127,8 @@
             input.addEventListener("blur", doneClick);
             input.addEventListener("keydown", doneEnter);
 
+            //need Add delete storage key after backspace to ""---------------------------------------------------------------------
+
             function doneClick() {
                 this.parentNode.innerHTML = compute(this.value);
                 if (this.value) {
@@ -140,18 +144,24 @@
             }
         }
     }
-
+var serverDB;
     //need verification of value in storage(ket = data-cell....)
 
     function loadData() {
         if (localStorage.length) {
-            for(elem in localStorage) {
+            for (elem in localStorage) {
                 var value = localStorage[elem];
                 value = compute(value);
                 document.getElementById(elem).innerHTML = value || "";
             }
         } else {
-
+            getServerData('json.php', function(data) {
+                for (elem in data) {
+                    console.log(elem);
+                    console.log(data[elem]);
+                }
+            });
+            
         }
     }
 
@@ -166,10 +176,28 @@
 
     // Formula handler will add here
     function compute(value) {
-        if (value.charAt(0) == "=") {
+        if (value.charAt(0) === "=") {
                 value = eval(value.substring(1));
             }
         return value;
     }
+
+     function getServerData (path, callback) {
+        var httpRequest = new XMLHttpRequest();
+        
+        httpRequest.onreadystatechange = function () {
+            if (httpRequest.readyState === 4) {
+                if (httpRequest.status === 200) {
+                    JSONData = JSON.parse(httpRequest.responseText);
+                    if (callback) callback(JSONData);
+                }
+            }
+        };
+
+
+        httpRequest.open('POST', path);
+        httpRequest.send();
+    }
+
 
 })();
