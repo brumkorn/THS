@@ -1,6 +1,5 @@
 /*Globals*/
 
-
 /* apply an optimized natural box layout model*/
 
 html,body {
@@ -44,7 +43,6 @@ html,body {
 
 .formulas {
     height: 20px;
-    box-shadow: inset 5px black;
     background-color: white;
     display: inherit;
 }
@@ -83,11 +81,21 @@ td {
     min-width: 100px;
     width: 100px;
     border: solid 1px #c0c0c0;
-    background-color: white;
-
     padding: 0;
     margin: 0;
+}
 
+.data-cell {
+    background-color: white;
+    padding:0 2px;
+    text-align: right;
+}
+
+.data-cell:focus {
+    outline-offset: -2px;
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: #4C8EFA;
 }
 
 tbody {
@@ -116,24 +124,27 @@ table {
     margin-top: 100px;
 
 }
-/*
+
 input {
+    position: relative;
+    top: 1px;
     margin: 0;
     padding:0 2px;
     height: 100%;
     width: 100%;
     border: 0px;
+    box-shadow: 0 2px 6px 2px rgba(0, 0, 0, 0.3);
 }
-*/
 
-/*
+
+
 input:focus {
-    outline-offset: -1px;
+    outline-offset: 0px;
     outline-style: solid;
     outline-width: 2px;
     outline-color: #4C8EFA;
 }
-*/
+
 
 
 /*Additions*/
