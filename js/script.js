@@ -12,10 +12,11 @@
 
 
 ;(function() {
-    "use dtrict";  //seems like use strict not working. Why? -----------------------------------------------------------
+    "use strict"; 
     createTable();
     loadData();
     enterData();
+    resetDBs();
 
 
 
@@ -99,25 +100,37 @@
         */
 
         function invokeInput(e) {
+            var currentID = e.target.id
             var input; 
-            // var backspace = 8;
+            //var backspace = 8;
+            var deleteKey = 46;
             var storageValue = localStorage[e.target.id] || "";
 
-            if ( e.target.id.startsWith("row-head") 
-                || e.target.id.startsWith("col-head")) {
+            if ( currentID.startsWith("row-head") 
+                || currentID.startsWith("col-head")) {
                 return;
             }
 
             // backspace produce back page changing-------------------------------------------------------------------------------
-
             // if (e.keyCode === backspace) {
             //     e.target.innerHTML = "";
-            //     localStorage[e.target.id] = "";
+            //     localStorage.removeItem(currentID);
             //     return;
             // }
+            
+            if (e.keyCode === deleteKey) {
+                e.target.innerHTML = "";
+                localStorage.removeItem(currentID);
+                return;
+            }
+
+            
+
+
 
             input = document.createElement("input");
             input.value = storageValue;
+            
             e.target.innerHTML = "";
             e.target.appendChild(input);
             input.focus();
@@ -131,9 +144,11 @@
 
             function doneClick() {
                 this.parentNode.innerHTML = compute(this.value);
-                if (this.value) {
-                    localStorage[e.target.id] = this.value;
-                } 
+                if (!this.value) {
+                    localStorage.removeItem(currentID);
+                    return;
+                }
+                localStorage[currentID] = this.value;
             }
 
             function doneEnter(e) {
@@ -146,16 +161,27 @@
     }
     //need verification of value in storage(ket = data-cell....)
 
+    function resetDBs() {
+        var resetButton = document.getElementsByClassName("menu-button")[2];
+        resetButton.addEventListener("click", reset); 
+
+        function reset(e) {
+            localStorage.clear();
+        }
+    }
+
     function loadData() {
         var value;
         if (localStorage.length) {
-            for (elem in localStorage) {
+            for (var elem in localStorage) {
                 value = compute( localStorage[elem] );
                 document.getElementById(elem).innerHTML = value || "";
             }
-        } else {
+        } 
+        else {
             getServerData("jsonget.php", function(data) {
-                for (elem in data) {
+                for (var elem in data) {
+                    localStorage[elem] = data[elem];
                     value = compute( data[elem] );
                     document.getElementById(elem).innerHTML = value || "";
                 }
@@ -179,7 +205,7 @@
     //somewhere because if input in file was not from save functions in this
     //app it may produce errors (not a string values, charAt verif not work);
     function compute(value) {
-        if (!typeof(value) === "Sring" && value.charAt(0) === "=") {
+        if (typeof(value) === "string" && value.charAt(0) === "=") {
                 value = eval(value.substring(1));
             }
         return value;
@@ -195,9 +221,9 @@
 *@param {string} path to php file(server);
 *@param {function} callback function with response handler
 */
-    function getServerData (path, callback) {
+    function getServerData(path, callback) {
         var httpRequest = new XMLHttpRequest();
-        
+
         httpRequest.onreadystatechange = function () {
             if (httpRequest.readyState === 4) {
                 if (httpRequest.status === 200) {
@@ -206,7 +232,6 @@
                 }
             }
         };
-
 
         httpRequest.open("POST", path);
         httpRequest.send();

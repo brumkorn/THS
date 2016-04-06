@@ -155,7 +155,9 @@ td {
 
 .data-cell {
     background-color: white;
+    font-size: 15px;
     padding:0 2px;
+    vertical-align: middle;
     text-align: right;
 }
 
