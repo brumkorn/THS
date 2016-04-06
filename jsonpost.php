@@ -9,4 +9,6 @@ fwrite($f, $_POST['nameKey']);
 
 fclose($f);
 
+echo 'Succesfull saving!';
+
 ?>

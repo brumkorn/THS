@@ -17,6 +17,7 @@
     loadData();
     enterData();
     resetDBs();
+    saveDB();
 
 
 
@@ -117,20 +118,15 @@
             //     localStorage.removeItem(currentID);
             //     return;
             // }
-            
+
             if (e.keyCode === deleteKey) {
                 e.target.innerHTML = "";
                 localStorage.removeItem(currentID);
                 return;
             }
 
-            
-
-
-
             input = document.createElement("input");
             input.value = storageValue;
-            
             e.target.innerHTML = "";
             e.target.appendChild(input);
             input.focus();
@@ -144,10 +140,12 @@
 
             function doneClick() {
                 this.parentNode.innerHTML = compute(this.value);
+
                 if (!this.value) {
                     localStorage.removeItem(currentID);
                     return;
                 }
+
                 localStorage[currentID] = this.value;
             }
 
@@ -161,15 +159,56 @@
     }
     //need verification of value in storage(ket = data-cell....)
 
+    /*
+    *
+    *Ad event listener to "reset" button.  
+    *Clearing all databases on click;
+    *
+    */
     function resetDBs() {
         var resetButton = document.getElementsByClassName("menu-button")[2];
+
         resetButton.addEventListener("click", reset); 
 
         function reset(e) {
+            for (var elem in localStorage) {
+                document.getElementById(elem).innerHTML = "";
+            }
             localStorage.clear();
         }
     }
 
+    /*
+    *
+    *Ad event listener to "save" button.  
+    *Saving current local storage state to json db text file on server.
+    *
+    */
+    function saveDB() {
+        var saveButton = document.getElementsByClassName("menu-button")[1];
+
+        saveButton.addEventListener("click", save); 
+
+        function save(e) {
+            postServerData('jsonpost.php', localStorage, function(data) {
+                alert(data);
+            });
+        }
+        
+
+        // function save(e) {
+        //     postServerData("jsonpost.php", localStorage, function(data) {
+        //         alert(data);
+        //     });
+        // }
+    }
+
+    /*
+    *
+    *Loading saved data. Firs looking in localStorage, if localSorage is empty,
+    *loading from json database from server.
+    *
+    */
     function loadData() {
         var value;
         if (localStorage.length) {
@@ -236,6 +275,33 @@
         httpRequest.open("POST", path);
         httpRequest.send();
     }
+/*
+*
+*Post json object with saved spreadshit to server
+*with POST send. Information saving in the txt file.
+*
+*
+*@param {string} path to php file(server);
+*@param {object} json-object to send;
+*@param {function} callback function with response handler
+*/
+    function postServerData(path, object, callback) {
+        var transition = JSON.stringify(object);
+        var params = "nameKey=" + transition;
+        var httpRequest = new XMLHttpRequest();
 
+        httpRequest.onreadystatechange = function() {
+            if (httpRequest.readyState === 4) {
+                if (httpRequest.status === 200) {
+                    var data = httpRequest.responseText;
+                    if (callback) callback(data);
+                }
+            }
+        };
 
+        httpRequest.open('POST', path);
+        httpRequest.setRequestHeader("Content-type",
+                                     "application/x-www-form-urlencoded");
+        httpRequest.send(params); 
+    }
 })();
