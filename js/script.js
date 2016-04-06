@@ -12,7 +12,7 @@
 
 
 ;(function() {
-    "use dtrict";
+    "use dtrict";  //seems like use strict not working. Why? -----------------------------------------------------------
     createTable();
     loadData();
     enterData();
@@ -144,19 +144,17 @@
             }
         }
     }
-var serverDB;
     //need verification of value in storage(ket = data-cell....)
 
     function loadData() {
         var value;
-        console.log(localStorage.length);
         if (localStorage.length) {
             for (elem in localStorage) {
                 value = compute( localStorage[elem] );
                 document.getElementById(elem).innerHTML = value || "";
             }
         } else {
-            getServerData('jsonget.php', function(data) {
+            getServerData("jsonget.php", function(data) {
                 for (elem in data) {
                     value = compute( data[elem] );
                     document.getElementById(elem).innerHTML = value || "";
@@ -203,14 +201,14 @@ var serverDB;
         httpRequest.onreadystatechange = function () {
             if (httpRequest.readyState === 4) {
                 if (httpRequest.status === 200) {
-                    JSONData = JSON.parse(httpRequest.responseText);
+                    var JSONData = JSON.parse(httpRequest.responseText);
                     if (callback) callback(JSONData);
                 }
             }
         };
 
 
-        httpRequest.open('POST', path);
+        httpRequest.open("POST", path);
         httpRequest.send();
     }
 

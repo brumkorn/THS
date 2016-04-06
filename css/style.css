@@ -42,6 +42,7 @@ html,body {
     background-color: green;
     height:100%;
     -moz-user-select: none;
+    -ms-user-select: none;
     -webkit-user-select: none;
     user-select: none;  
 
@@ -64,6 +65,7 @@ html,body {
     padding-top: 34px;
     padding-bottom: 0;
     -moz-user-select: none;
+    -ms-user-select: none;
     -webkit-user-select: none;
     user-select: none;  
 }
@@ -231,6 +233,7 @@ input:focus {
 .menu-button, td {
     cursor: default;
     -moz-user-select: none;
+    -ms-user-select: none;
     -webkit-user-select: none;
     user-select: none;  
 }
