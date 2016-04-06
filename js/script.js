@@ -148,17 +148,18 @@ var serverDB;
     //need verification of value in storage(ket = data-cell....)
 
     function loadData() {
+        var value;
+        console.log(localStorage.length);
         if (localStorage.length) {
             for (elem in localStorage) {
-                var value = localStorage[elem];
-                value = compute(value);
+                value = compute( localStorage[elem] );
                 document.getElementById(elem).innerHTML = value || "";
             }
         } else {
-            getServerData('json.php', function(data) {
+            getServerData('jsonget.php', function(data) {
                 for (elem in data) {
-                    console.log(elem);
-                    console.log(data[elem]);
+                    value = compute( data[elem] );
+                    document.getElementById(elem).innerHTML = value || "";
                 }
             });
             
@@ -175,14 +176,28 @@ var serverDB;
     */
 
     // Formula handler will add here
+
+    //Maybe need varification of JSON objects from storage and text file
+    //somewhere because if input in file was not from save functions in this
+    //app it may produce errors (not a string values, charAt verif not work);
     function compute(value) {
-        if (value.charAt(0) === "=") {
+        if (!typeof(value) === "Sring" && value.charAt(0) === "=") {
                 value = eval(value.substring(1));
             }
         return value;
     }
 
-     function getServerData (path, callback) {
+
+/*
+*
+*Getting json object with last saved spreadshit with server
+*POST request. Information saved in the txt file.
+*
+*
+*@param {string} path to php file(server);
+*@param {function} callback function with response handler
+*/
+    function getServerData (path, callback) {
         var httpRequest = new XMLHttpRequest();
         
         httpRequest.onreadystatechange = function () {

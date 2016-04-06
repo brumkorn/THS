@@ -6,7 +6,8 @@ html,body {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
-    margin: auto;
+    margin: 0;
+    padding: 0;
     height: 100%;
 }
 
@@ -26,25 +27,82 @@ html,body {
     position: fixed;
     top: 0;
     z-index: 2;
-    display: block;
     width: 100%;
 }
 
+.main-menu-button-align {
+    float: left;
+    width: 42px;
+    height: 60px;
+    padding-right: 1px;
+}
+
+.main-menu-button {
+    position: relative;
+    background-color: green;
+    height:100%;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;  
+
+}
+
+.main-menu-button img {
+    position: absolute;
+    top: 12px;
+    left: 2px;
+}
+
+.menu-bar-align {
+    height: 60px;
+}
+
 .menu-bar {
-    height: 20px;
-    display: inherit;
+    background-color: white;
+    height: 100%;
+    padding-left: 3px;
+    padding-top: 34px;
+    padding-bottom: 0;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;  
+}
+
+.menu-button {
+    position: relative;
+    display: inline-block;
+    text-align: center;
+    padding: 4px;
+    height: 25px;
+}
+
+.menu-button:hover {
+    background-color: #c5c5c5;
+
+}
+
+.menu-button-active {
+    background-color: red;
+    top: 2px;
+    left: 2px;
+}
+
+.tool-bar-align {
+    height: 35px;
 }
 
 .tool-bar {
-
-    height: 60px;
-    display: inherit;
+    background-color: #f5f5f5;
+    box-shadow: inset 0 1px 0 0 #fff;
+    border: 1px solid #d9d9d9;
+    height: 100%;
+    width: 100%;
 }
 
 .formulas {
     height: 20px;
+    padding-left: 5px;
     background-color: white;
-    display: inherit;
 }
 
 .bookmarks {
@@ -53,13 +111,22 @@ html,body {
     float: left;
 }
 
-.footer-toolbar {
+.footer-toolbar-align {
+    background-color: red;
     position:fixed;
     bottom: 17px;
     width: 100%;
     height: 40px;
     z-index: 99;
 }
+
+.footer-toolbar {
+    background-color: #f5f5f5;
+    box-shadow: inset 0 1px 0 0 #fff;
+    border: 1px solid #d9d9d9;
+    height: 100%;
+}
+
 
 /*Table*/
 
@@ -101,7 +168,7 @@ td {
 tbody {
     display: block;
     width: 100%;
-    height: 670px;
+    height: 724px;
     overflow: scroll;
 }
 
@@ -121,7 +188,7 @@ table {
 
 .main {
     width: 100%;
-    margin-top: 100px;
+    margin-top: 115px;
 
 }
 
@@ -160,4 +227,11 @@ input:focus {
     linear-gradient(120deg, rgba(0,0,0,.1) 25%, transparent 25%, 
         transparent 75%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1));
     background-size: 70px 120px;
+}
+
+.menu-button, td {
+    cursor: default;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;  
 }
