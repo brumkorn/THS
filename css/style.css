@@ -81,10 +81,9 @@ html,body {
 
 }
 
-.menu-button-active {
-    background-color: red;
-    top: 2px;
-    left: 2px;
+.menu-button:active {
+    top: 1px;
+    left: 1px;
 }
 
 .tool-bar-align {
