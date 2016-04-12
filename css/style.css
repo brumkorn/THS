@@ -18,7 +18,6 @@ html,body {
 .wrapper {
     margin:auto;
     height: inherit;
-    overflow-y: hidden;
 }
 
 /*Column and Row headings*/
@@ -130,22 +129,99 @@ html,body {
 
 
 /*Table*/
+.main {
+    position: relative;
+}
+.col-header-wrapper {
+    position: relative;
+    width:100%;
+    height: 24px;
 
-td:first-child {
-    max-width:40px;
-    position:relative;
+}
+
+.col-header-wrapper div:first-child {
+    display: inline-block;
+    font-size: 11px;
+    height: 24px;
+    width: 40px;
     background-color: #f1f1f1;
+    border: solid 1px #c0c0c0;
+    padding: 0;
+    margin: 0;
+}
 
+.col-header, .col-header ol, .col-header li {
+    height: 100%;
+}
+
+.col-header {
+    position: absolute;
+    width:100%;
+    display: inline-block;
+}
+
+.col-header ol {
+    counter-reset: columns;
+    list-style-type: none;
+    display: inline-block;
+    list-style-position: inside;
+    margin: 0;
+    padding: 0;
+}
+
+.col-header li {
+    display: table-cell;
     text-align: center;
+    font-size: 11px;
+    height: 24px;
+    min-width: 100px;
+    width: 100px;
+    background-color: #f1f1f1;
+    border: solid 0.5px #c0c0c0;
+    padding: 4px;
+    margin: 0;
 }
 
-thead td {
-     background-color: #f1f1f1;
+.col-header li:before {
+    content: counter(columns, upper-latin) " ";
+    counter-increment: columns;
 }
+
+.row-header {
+    display: inline-block;
+    width: 40px;
+}
+
+.row-header ol {
+    display: inline-block;
+    counter-reset: rows;
+    list-style-type: none;
+    list-style-position: inside;
+    margin: 0;
+    padding: 0;
+}
+
+.row-header li {
+    text-align: center;
+    font-size: 11px;
+    height: 24px;
+    width: 40px;
+    background-color: #f1f1f1;
+    border: solid 0.5px #c0c0c0;
+    padding: 4px;
+    margin: 0;
+}
+
+.row-header li:before {
+    content: counter(rows) " ";
+    counter-increment: rows;
+}
+
+
 
 td {
     font-size: 11px;
-    height: 24px;
+
     min-width: 100px;
     width: 100px;
     border: solid 1px #c0c0c0;
@@ -155,6 +231,7 @@ td {
 
 .data-cell {
     background-color: white;
+        height: 24px;
     font-size: 15px;
     padding:0 2px;
     vertical-align: middle;
@@ -169,23 +246,14 @@ td {
 }
 
 tbody {
-    display: block;
-    width: 100%;
-    height: 768px;
-    overflow: scroll;
+    display: inline-block;
 }
 
-thead {
-    display: block;
-    text-align: center;
-    width: 100%;
-    background-color: #f1f1f1;
-}
 
 table {
-    margin-top:100px;
+    position: absolute;
     display: inline-block;
-    margin:auto;
+    margin: auto;
     border-collapse: collapse;
 }
 
@@ -238,4 +306,8 @@ input:focus {
     -ms-user-select: none;
     -webkit-user-select: none;
     user-select: none;  
+}
+
+.clearFix {
+    clear: both;
 }

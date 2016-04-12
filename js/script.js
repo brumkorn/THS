@@ -13,19 +13,79 @@
 
 ;(function() {
     "use strict"; 
-    createTable();
-    loadData();
-    enterData();
-    resetDBs();
-    saveDB();
+    var SheetEditor = function () {
+        var DEFAULT_ROWS = 10,
+            DEFAULT_COLUMNS = 10;
 
+        this.createTable = function(columns, rows) {
+            var rows = rows || DEFAULT_ROWS,
+                columns = columns || DEFAULT_COLUMNS;
+
+            var newDiv = function() {
+                    return document.createElement("div");
+                };
+
+            var tableWrapper = document.querySelector("#table-wrapper");
+
+            var colHeaderWrapper = tableWrapper.appendChild( newDiv() );
+            colHeaderWrapper.classList.add("col-header-wrapper");
+            var cornerCell = colHeaderWrapper.appendChild( newDiv() );
+            var colHeader = colHeaderWrapper.appendChild( newDiv() );
+            colHeader.classList.add("col-header");
+            colHeader.appendChild( document.createElement("ol") );
+            //tableWrapper.appendChild( newDiv() ).classList.add("clearFix");
+
+            var rowHeader = tableWrapper.appendChild( newDiv() );
+            rowHeader.classList.add("row-header");
+            rowHeader.appendChild( document.createElement("ol") );
+
+
+            var table = tableWrapper.appendChild( document.createElement("table") )
+            var body = table.appendChild( document.createElement("tbody") );
+
+
+            var insertColHeader = function(columns) {
+                for (var i = 0; i <= columns; i++) {
+                    document
+                        .querySelector(".col-header ol")
+                        .appendChild( document.createElement("li") );
+                }
+            }
+            insertColHeader(columns);
+
+            var insertRowHeader = function(rows) {
+                for (var i = 0; i <= rows; i++) {
+                    document
+                        .querySelector(".row-header ol")
+                        .appendChild( document.createElement("li") );
+                }
+            }
+            insertRowHeader(rows);
+
+
+            for (var i = 0; i <= rows; i++) {
+                var row = body.insertRow(-1);
+
+                for (var j = 0; j <= columns; j++) {
+                    var cell = row.insertCell(-1);
+
+                    cell.classList.add("data-cell");
+                    cell.tabIndex = 1;
+                    
+                }
+            }
+         }
+    }
+
+var editor = new SheetEditor();
+editor.createTable();
 
 
     /*
-    *Create table with speifying number of columns and rows.
-    *Table first row is tHead with column naming.
-    *Table first column is header with row index.
-    *Other table body consists of cells.
+    *Create tableWrapper with speifying number of columns and rows.
+    *tableWrapper first row is tHead with column naming.
+    *tableWrapper first column is header with row index.
+    *Other tableWrapper body consists of cells.
     *
     *Each input tag have ID wich consists of column letter and row index.
     *
@@ -39,10 +99,10 @@
         rows = rows || 1000;
         columns = columns || 26;
 
-        var table = document.getElementById("table");
-        var header = table.createTHead();
+        var tableWrapper = document.getElementById("tableWrapper");
+        var header = tableWrapper.createTHead();
         header.id = "header";
-        var body = table.appendChild( document.createElement("tbody") );
+        var body = tableWrapper.appendChild( document.createElement("tbody") );
 
         for (var i = 0; i <= rows; i++) {
             var row;
@@ -90,10 +150,10 @@
 
     //Maybe need to separate into few functions
     function enterData() {
-        var table = document.getElementById("table");
+        var tableWrapper = document.getElementById("tableWrapper");
 
-        table.addEventListener("dblclick", invokeInput);
-        table.addEventListener("keydown", invokeInput);
+        tableWrapper.addEventListener("dblclick", invokeInput);
+        tableWrapper.addEventListener("keydown", invokeInput);
 
         /*
         * Event handler for dblclick Listner
