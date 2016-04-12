@@ -103,7 +103,7 @@
         function invokeInput(e) {
             var currentID = e.target.id
             var input; 
-            //var backspace = 8;
+            var backspace = 8;
             var deleteKey = 46;
             var storageValue = localStorage[e.target.id] || "";
 
@@ -112,7 +112,7 @@
                 return;
             }
 
-            // backspace produce back page changing-------------------------------------------------------------------------------
+            //backspace produce back page changing-------------------------------------------------------------------------------
             // if (e.keyCode === backspace) {
             //     e.target.innerHTML = "";
             //     localStorage.removeItem(currentID);
