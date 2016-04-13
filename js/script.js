@@ -10,6 +10,31 @@
 *@version "0.01 04/05/16"
 */
 
+// function Cell() {}
+
+// function FormulaCell() {
+//     this.getValue = functino() {}
+// }
+
+// function SheetEditor(param) {
+
+//     if (1 == 1)
+//         this.getValue = function() {
+
+//         }
+
+//         var c = new Cell;
+
+//         FormulaCell.call(c)
+
+// }
+
+// SheetEditor.prototype.getValue = function() {
+//     return 5;
+// }
+
+// SheetEditor.DEFAULT_ROWS = 10;
+
 
 ;(function() {
     "use strict"; 
@@ -70,7 +95,7 @@
                     var cell = row.insertCell(-1);
 
                     cell.classList.add("data-cell");
-                    cell.tabIndex = 1;
+                    cell.tabIndex = i + "";
                     
                 }
             }

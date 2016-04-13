@@ -177,7 +177,7 @@ html,body {
     min-width: 100px;
     width: 100px;
     background-color: #f1f1f1;
-    border: solid 0.5px #c0c0c0;
+    border: solid 1px #c0c0c0;
     padding: 4px;
     margin: 0;
 }
@@ -202,12 +202,14 @@ html,body {
 }
 
 .row-header li {
+    float: left;
+    display: table-cell;
     text-align: center;
     font-size: 11px;
     height: 24px;
     width: 40px;
     background-color: #f1f1f1;
-    border: solid 0.5px #c0c0c0;
+    border: solid 1px #c0c0c0;
     padding: 4px;
     margin: 0;
 }
@@ -231,7 +233,7 @@ td {
 
 .data-cell {
     background-color: white;
-        height: 24px;
+    height: 24px;
     font-size: 15px;
     padding:0 2px;
     vertical-align: middle;
