@@ -29,98 +29,115 @@
 
 // }
 
-// SheetEditor.prototype.getValue = function() {
-//     return 5;
-// }
-
 // SheetEditor.DEFAULT_ROWS = 10;
-
+var a = console.log.bind(console);
 
 ;(function() {
-"use strict"; 
+"use strict";
+/*Shortcuts*/
+var newEl = document.createElement.bind(document);
+var select = document.querySelector.bind(document);
+
 
 function SheetEditor() {
-    this._DEFAULT_ROWS = 30;
-    this._DEFAULT_COLUMNS = 26;
-    this._currentSheet = 0;
+    this._currentSheet;
+}
+function Sheet(sheetID) {
+    this.name = "List " + sheetID;
+    this.ID = sheetID;
+    this._currentRows = 0;
+    this._currentColumns = 0;
 }
 
-SheetEditor.prototype.insertColHeader = function(columns) {
-    for (var i = 0; i < columns; i++) {
-            document
-                .querySelector(".col-header ol")
-                .appendChild( document.createElement("li") );
-    }
-}
-SheetEditor.prototype.insertRowHeader = function(rows) {
-    for (var i = 0; i < rows; i++) {
-            document
-                .querySelector(".row-header ol")
-                .appendChild( document.createElement("li") );
-    }
-}
+SheetEditor.prototype._DEFAULT_COLUMNS = 26;
+SheetEditor.prototype._DEFAULT_ROWS = 35;
+SheetEditor.prototype.sheetList = [];
 
-SheetEditor.prototype.totalSheets = 0;
+SheetEditor.prototype.createTable = function() {
+    var windowFrame = select(".main");
+    var tableWrapper = select("#table-wrapper");
 
-function Sheet() {
-    this.SHEET_ID;
-    this.currentRows = 0;
-    this.currentColumns = 0;
+    var colHeaderWrapper = windowFrame.insertBefore(newEl("div"), tableWrapper);
+    colHeaderWrapper.classList.add("col-header-wrapper");
+    var cornerCell = colHeaderWrapper.appendChild( newEl("div") );
+    var colHeader = colHeaderWrapper.appendChild( newEl("div") );
+    colHeader.classList.add("col-header");
+    colHeader.appendChild( newEl("ol") );
+
+    var rowHeader = windowFrame.insertBefore(newEl("div"), tableWrapper);
+    rowHeader.classList.add("row-header");
+    rowHeader.appendChild( newEl("ol") );
+
+    var table = tableWrapper.appendChild( newEl("table") )
+    table.appendChild( newEl("tbody") );
 }
-
+Sheet.prototype.insertColHeader = function(columns) {
+            select(".col-header ol").appendChild( newEl("li") );
+}
+Sheet.prototype.insertRowHeader = function() {
+            select(".row-header ol").appendChild( newEl("li") );
+}
 SheetEditor.prototype.createSheet = function(columns, rows) {
     var rows = rows || this._DEFAULT_ROWS,
         columns = columns || this._DEFAULT_COLUMNS;
 
-    var newDiv = function() {
-            return document.createElement("div");
-        };
-
-    var windowFrame = document.querySelector(".main");
-    var tableWrapper = document.querySelector("#table-wrapper");
+    var sheet = new Sheet(this.sheetList.length + 1);
+    this._currentSheet = sheet;
+    this.sheetList.push(sheet);
     
 
-    var colHeaderWrapper = windowFrame.insertBefore(newDiv(), tableWrapper);
-    colHeaderWrapper.classList.add("col-header-wrapper");
-    var cornerCell = colHeaderWrapper.appendChild( newDiv() );
-    var colHeader = colHeaderWrapper.appendChild( newDiv() );
-    colHeader.classList.add("col-header");
-    colHeader.appendChild( document.createElement("ol") );
+    var tbody = select("tbody");
 
-    var rowHeader = windowFrame.insertBefore(newDiv(), tableWrapper);
-    rowHeader.classList.add("row-header");
-    rowHeader.appendChild( document.createElement("ol") );
+    sheet.addRows(rows);
+    sheet.addColumns(columns);
+}
 
+Sheet.prototype.addRows = function(rows) {
+    var tbody = select("tbody");
 
-    var table = tableWrapper.appendChild( document.createElement("table") )
-    var tbody = table.appendChild( document.createElement("tbody") );
-
-
-    this.insertColHeader(columns);
-
-    this.insertRowHeader(rows);
-
-    
+    rows = rows || 1;
+    this._currentRows += rows;
 
     for (var i = 0; i < rows; i++) {
         var row = tbody.insertRow(-1);
-
-        for (var j = 0; j < columns; j++) {
+        this.insertRowHeader();
+        for (var j = 0; j < this._currentColumns; j++) {
             var cell = row.insertCell(-1);
 
             cell.classList.add("data-cell");
-            cell.tabIndex = i + "";
-            
+            cell.tabIndex = i + this._currentRows + "";
         }
     }
 }
 
+Sheet.prototype.addColumns = function(columns) {
+    var tbody = select("tbody");
+    var rowList = tbody.querySelectorAll("tr");
 
+    columns = columns || 1;
+    this._currentColumns += columns;
 
+    for (var i = 0; i < this._currentRows; i++) {
+        for (var j = 0; j < columns; j++) {
+            if (i === 0) {
+                this.insertColHeader();
+            }
+
+            var cell = rowList[i].insertCell(-1);
+            cell.classList.add("data-cell");
+            cell.tabIndex = this._currentRows + "";
+        }
+    }
+}
 
 var editor = new SheetEditor();
+editor.createTable();
 editor.createSheet();
 
+
+a(editor._currentSheet.name);
+a("rows: " + editor._currentSheet._currentRows);
+a("columns: " + editor._currentSheet._currentColumns);
 /*Old code*/
     /*
     *Create tableWrapper with speifying number of columns and rows.
