@@ -39,8 +39,8 @@
 ;(function() {
     "use strict"; 
     var SheetEditor = function () {
-        var DEFAULT_ROWS = 10,
-            DEFAULT_COLUMNS = 10;
+        var DEFAULT_ROWS = 150,
+            DEFAULT_COLUMNS = 26;
 
         this.createTable = function(columns, rows) {
             var rows = rows || DEFAULT_ROWS,
@@ -70,7 +70,7 @@
 
 
             var insertColHeader = function(columns) {
-                for (var i = 0; i <= columns; i++) {
+                for (var i = 0; i < columns; i++) {
                     document
                         .querySelector(".col-header ol")
                         .appendChild( document.createElement("li") );
@@ -79,7 +79,7 @@
             insertColHeader(columns);
 
             var insertRowHeader = function(rows) {
-                for (var i = 0; i <= rows; i++) {
+                for (var i = 0; i < rows; i++) {
                     document
                         .querySelector(".row-header ol")
                         .appendChild( document.createElement("li") );
@@ -88,10 +88,10 @@
             insertRowHeader(rows);
 
 
-            for (var i = 0; i <= rows; i++) {
+            for (var i = 0; i < rows; i++) {
                 var row = body.insertRow(-1);
 
-                for (var j = 0; j <= columns; j++) {
+                for (var j = 0; j < columns; j++) {
                     var cell = row.insertCell(-1);
 
                     cell.classList.add("data-cell");
