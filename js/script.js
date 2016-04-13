@@ -37,75 +37,91 @@
 
 
 ;(function() {
-    "use strict"; 
-    var SheetEditor = function () {
-        var DEFAULT_ROWS = 150,
-            DEFAULT_COLUMNS = 26;
+"use strict"; 
 
-        this.createTable = function(columns, rows) {
-            var rows = rows || DEFAULT_ROWS,
-                columns = columns || DEFAULT_COLUMNS;
+function SheetEditor() {
+    this._DEFAULT_ROWS = 30;
+    this._DEFAULT_COLUMNS = 26;
+    this._currentSheet = 0;
+}
 
-            var newDiv = function() {
-                    return document.createElement("div");
-                };
-
-            var tableWrapper = document.querySelector("#table-wrapper");
-
-            var colHeaderWrapper = tableWrapper.appendChild( newDiv() );
-            colHeaderWrapper.classList.add("col-header-wrapper");
-            var cornerCell = colHeaderWrapper.appendChild( newDiv() );
-            var colHeader = colHeaderWrapper.appendChild( newDiv() );
-            colHeader.classList.add("col-header");
-            colHeader.appendChild( document.createElement("ol") );
-            //tableWrapper.appendChild( newDiv() ).classList.add("clearFix");
-
-            var rowHeader = tableWrapper.appendChild( newDiv() );
-            rowHeader.classList.add("row-header");
-            rowHeader.appendChild( document.createElement("ol") );
-
-
-            var table = tableWrapper.appendChild( document.createElement("table") )
-            var body = table.appendChild( document.createElement("tbody") );
-
-
-            var insertColHeader = function(columns) {
-                for (var i = 0; i < columns; i++) {
-                    document
-                        .querySelector(".col-header ol")
-                        .appendChild( document.createElement("li") );
-                }
-            }
-            insertColHeader(columns);
-
-            var insertRowHeader = function(rows) {
-                for (var i = 0; i < rows; i++) {
-                    document
-                        .querySelector(".row-header ol")
-                        .appendChild( document.createElement("li") );
-                }
-            }
-            insertRowHeader(rows);
-
-
-            for (var i = 0; i < rows; i++) {
-                var row = body.insertRow(-1);
-
-                for (var j = 0; j < columns; j++) {
-                    var cell = row.insertCell(-1);
-
-                    cell.classList.add("data-cell");
-                    cell.tabIndex = i + "";
-                    
-                }
-            }
-         }
+SheetEditor.prototype.insertColHeader = function(columns) {
+    for (var i = 0; i < columns; i++) {
+            document
+                .querySelector(".col-header ol")
+                .appendChild( document.createElement("li") );
     }
+}
+SheetEditor.prototype.insertRowHeader = function(rows) {
+    for (var i = 0; i < rows; i++) {
+            document
+                .querySelector(".row-header ol")
+                .appendChild( document.createElement("li") );
+    }
+}
+
+SheetEditor.prototype.totalSheets = 0;
+
+function Sheet() {
+    this.SHEET_ID;
+    this.currentRows = 0;
+    this.currentColumns = 0;
+}
+
+SheetEditor.prototype.createSheet = function(columns, rows) {
+    var rows = rows || this._DEFAULT_ROWS,
+        columns = columns || this._DEFAULT_COLUMNS;
+
+    var newDiv = function() {
+            return document.createElement("div");
+        };
+
+    var windowFrame = document.querySelector(".main");
+    var tableWrapper = document.querySelector("#table-wrapper");
+    
+
+    var colHeaderWrapper = windowFrame.insertBefore(newDiv(), tableWrapper);
+    colHeaderWrapper.classList.add("col-header-wrapper");
+    var cornerCell = colHeaderWrapper.appendChild( newDiv() );
+    var colHeader = colHeaderWrapper.appendChild( newDiv() );
+    colHeader.classList.add("col-header");
+    colHeader.appendChild( document.createElement("ol") );
+
+    var rowHeader = windowFrame.insertBefore(newDiv(), tableWrapper);
+    rowHeader.classList.add("row-header");
+    rowHeader.appendChild( document.createElement("ol") );
+
+
+    var table = tableWrapper.appendChild( document.createElement("table") )
+    var tbody = table.appendChild( document.createElement("tbody") );
+
+
+    this.insertColHeader(columns);
+
+    this.insertRowHeader(rows);
+
+    
+
+    for (var i = 0; i < rows; i++) {
+        var row = tbody.insertRow(-1);
+
+        for (var j = 0; j < columns; j++) {
+            var cell = row.insertCell(-1);
+
+            cell.classList.add("data-cell");
+            cell.tabIndex = i + "";
+            
+        }
+    }
+}
+
+
+
 
 var editor = new SheetEditor();
-editor.createTable();
+editor.createSheet();
 
-
+/*Old code*/
     /*
     *Create tableWrapper with speifying number of columns and rows.
     *tableWrapper first row is tHead with column naming.
@@ -336,15 +352,15 @@ editor.createTable();
     }
 
 
-/*
-*
-*Getting json object with last saved spreadshit with server
-*POST request. Information saved in the txt file.
-*
-*
-*@param {string} path to php file(server);
-*@param {function} callback function with response handler
-*/
+    /*
+    *
+    *Getting json object with last saved spreadshit with server
+    *POST request. Information saved in the txt file.
+    *
+    *
+    *@param {string} path to php file(server);
+    *@param {function} callback function with response handler
+    */
     function getServerData(path, callback) {
         var httpRequest = new XMLHttpRequest();
 
@@ -360,16 +376,16 @@ editor.createTable();
         httpRequest.open("POST", path);
         httpRequest.send();
     }
-/*
-*
-*Post json object with saved spreadshit to server
-*with POST send. Information saving in the txt file.
-*
-*
-*@param {string} path to php file(server);
-*@param {object} json-object to send;
-*@param {function} callback function with response handler
-*/
+    /*
+    *
+    *Post json object with saved spreadshit to server
+    *with POST send. Information saving in the txt file.
+    *
+    *
+    *@param {string} path to php file(server);
+    *@param {object} json-object to send;
+    *@param {function} callback function with response handler
+    */
     function postServerData(path, object, callback) {
         var transition = JSON.stringify(object);
         var params = "nameKey=" + transition;
