@@ -34,43 +34,45 @@ var a = console.log.bind(console);
 
 ;(function() {
 "use strict";
-/*Shortcuts*/
-var newEl = document.createElement.bind(document);
-var select = document.querySelector.bind(document);
-
-
 function SheetEditor() {
     this._currentSheet;
 }
 function Sheet(sheetID) {
-    this.name = "List " + sheetID;
+    this.name = "List " + (sheetID + 1);
     this.ID = sheetID;
     this._currentRows = 0;
     this._currentColumns = 0;
 }
 
-SheetEditor.prototype._DEFAULT_COLUMNS = 35;
-SheetEditor.prototype._DEFAULT_ROWS = 350;
+SheetEditor.prototype._DEFAULT_COLUMNS = 26;
+SheetEditor.prototype._DEFAULT_ROWS = 60;
 SheetEditor.prototype.sheetList = [];
 
 SheetEditor.prototype.createTable = function() {
-    var windowFrame = select(".main");
-    var tableWrapper = select("#table-wrapper");
+    var windowFrame = document.querySelector(".main");
+    var sheetContainer =
+         windowFrame.appendChild( document.createElement("div") );
 
-    var colHeaderWrapper = windowFrame.insertBefore(newEl("div"), tableWrapper);
+    var tableWrapper = sheetContainer.appendChild( document.createElement("div") );
+    tableWrapper.classList.add("table-wrapper");
+
+    var colHeaderWrapper =
+        sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
     colHeaderWrapper.classList.add("col-header-wrapper");
-    colHeaderWrapper.appendChild( newEl("div") );
-    var colHeader = colHeaderWrapper.appendChild( newEl("div") );
-    colHeaderWrapper.appendChild( newEl("div") );
+    colHeaderWrapper.appendChild( document.createElement("div") );
+    var colHeader = 
+        colHeaderWrapper.appendChild( document.createElement("div") );
+    colHeaderWrapper.appendChild( document.createElement("div") );
     colHeader.classList.add("col-header");
-    colHeader.appendChild( newEl("ol") );
+    colHeader.appendChild( document.createElement("ol") );
 
-    var rowHeader = windowFrame.insertBefore(newEl("div"), tableWrapper);
+    var rowHeader = 
+        sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
     rowHeader.classList.add("row-header");
-    rowHeader.appendChild( newEl("ol") );
+    rowHeader.appendChild( document.createElement("ol") );
 
-    var table = tableWrapper.appendChild( newEl("table") )
-    table.appendChild( newEl("tbody") );
+    var table = tableWrapper.appendChild( document.createElement("table") )
+    table.appendChild( document.createElement("tbody") );
 
     tableWrapper.addEventListener("scroll", pullHeaders);
     tableWrapper.addEventListener("scroll", dynamicAddCells);
@@ -88,39 +90,40 @@ SheetEditor.prototype.createTable = function() {
 
         if( needMoreCols < 200 ) {
             editor._currentSheet.addColumns(5);
-            this.scrollLeft -= 500;
         }
 
         if( needMoreRows < 120 ) {
-            editor._currentSheet.addColumns(5);
-            this.scrollTop -= 200;
+            editor._currentSheet.addRows(5);
         }
 
     }
 }
 Sheet.prototype.insertColHeader = function(columns) {
-            select(".col-header ol").appendChild( newEl("li") );
+            document.querySelector(".col-header ol")
+                .appendChild( document.createElement("li") );
 }
 Sheet.prototype.insertRowHeader = function() {
-            select(".row-header ol").appendChild( newEl("li") );
+            document.querySelector(".row-header ol")
+                .appendChild( document.createElement("li") );
 }
 SheetEditor.prototype.createSheet = function(columns, rows) {
     var rows = rows || this._DEFAULT_ROWS,
         columns = columns || this._DEFAULT_COLUMNS;
 
-    var sheet = new Sheet(this.sheetList.length + 1);
+    var sheet = new Sheet(this.sheetList.length);
     this._currentSheet = sheet;
     this.sheetList.push(sheet);
     
-
-    var tbody = select("tbody");
+    var sheetContainer = document.querySelector(".main div:last-child");
+    sheetContainer.id = sheet.ID + "-sheet-container"
+    var tbody = sheetContainer.querySelector("tbody");
 
     sheet.addRows(rows);
     sheet.addColumns(columns);
 }
 
 Sheet.prototype.addRows = function(rows) {
-    var tbody = select("tbody");
+    var tbody = document.querySelector("tbody");
 
     rows = rows || 1;
     this._currentRows += rows;
@@ -138,7 +141,7 @@ Sheet.prototype.addRows = function(rows) {
 }
 
 Sheet.prototype.addColumns = function(columns) {
-    var tbody = select("tbody");
+    var tbody = document.querySelector("tbody");
     var rowList = tbody.querySelectorAll("tr");
 
     columns = columns || 1;
@@ -160,7 +163,6 @@ Sheet.prototype.addColumns = function(columns) {
 var editor = new SheetEditor();
 editor.createTable();
 editor.createSheet();
-
 
 a(editor._currentSheet.name);
 a("rows: " + editor._currentSheet._currentRows);
