@@ -18,6 +18,7 @@ html,body {
 .wrapper {
     margin:auto;
     height: inherit;
+    background-color: #f5f5f5;
 }
 
 /*Column and Row headings*/
@@ -131,10 +132,19 @@ html,body {
 /*Table*/
 .col-header-wrapper {
     height: 24px;
+    position: absolute;
+    left: 0;
+    right: 17px;
+    border-right: solid 1px #c0c0c0;
+    display: inline-block;
+    overflow: hidden;
 
 }
 
 .col-header-wrapper div:first-child {
+    position: absolute;
+    top: 0;
+    left: 0;
     display: inline-block;
     font-size: 11px;
     height: 24px;
@@ -143,7 +153,9 @@ html,body {
     border: solid 1px #c0c0c0;
     padding: 0;
     margin: 0;
+    z-index: 2
 }
+
 
 .col-header, .col-header ol, .col-header li {
     height: inherit;
@@ -151,8 +163,11 @@ html,body {
 
 .col-header {
     position: absolute;
-    width:100%;
+    top: 0;
+    left: 40px;
     display: inline-block;
+    overflow: hidden;
+    z-index: 1;
 }
 
 .col-header ol {
@@ -174,7 +189,6 @@ html,body {
     background-color: #f1f1f1;
     border: solid 1px #c0c0c0;
     border-left: 0;
-    border-bottom: 0;
     padding: 4px;
     margin: 0;
 }
@@ -185,9 +199,13 @@ html,body {
 }
 
 .row-header {
-    
-    display: inline-block;
+    position: absolute;
+    top: 24px;
+    left: 0;
+    bottom: 17px;
     width: 40px;
+    overflow: hidden;
+    z-index: 1;
 }
 
 .row-header ol {
@@ -206,7 +224,6 @@ html,body {
     background-color: #f1f1f1;
     border: solid 1px #c0c0c0;
     border-top: 0;
-    border-right: 0;
     padding: 4px;
     margin: 0;
 }
@@ -227,7 +244,7 @@ html,body {
 
 #table-wrapper {
     position: fixed;
-    top:139px;
+    top:138px;
     right: 0;
     bottom: 40px;
     left:39px;
@@ -309,8 +326,4 @@ input:focus {
     -ms-user-select: none;
     -webkit-user-select: none;
     user-select: none;  
-}
-
-.clearFix {
-    clear: both;
 }

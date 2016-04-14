@@ -49,8 +49,8 @@ function Sheet(sheetID) {
     this._currentColumns = 0;
 }
 
-SheetEditor.prototype._DEFAULT_COLUMNS = 26;
-SheetEditor.prototype._DEFAULT_ROWS = 35;
+SheetEditor.prototype._DEFAULT_COLUMNS = 35;
+SheetEditor.prototype._DEFAULT_ROWS = 350;
 SheetEditor.prototype.sheetList = [];
 
 SheetEditor.prototype.createTable = function() {
@@ -59,8 +59,9 @@ SheetEditor.prototype.createTable = function() {
 
     var colHeaderWrapper = windowFrame.insertBefore(newEl("div"), tableWrapper);
     colHeaderWrapper.classList.add("col-header-wrapper");
-    var cornerCell = colHeaderWrapper.appendChild( newEl("div") );
+    colHeaderWrapper.appendChild( newEl("div") );
     var colHeader = colHeaderWrapper.appendChild( newEl("div") );
+    colHeaderWrapper.appendChild( newEl("div") );
     colHeader.classList.add("col-header");
     colHeader.appendChild( newEl("ol") );
 
@@ -70,6 +71,32 @@ SheetEditor.prototype.createTable = function() {
 
     var table = tableWrapper.appendChild( newEl("table") )
     table.appendChild( newEl("tbody") );
+
+    tableWrapper.addEventListener("scroll", pullHeaders);
+    tableWrapper.addEventListener("scroll", dynamicAddCells);
+
+    function pullHeaders () {
+        rowHeader.style.top = 24 - this.scrollTop + "px";
+        colHeader.style.left =  40 - this.scrollLeft + "px";
+    }
+
+    function dynamicAddCells () {
+        var needMoreCols = 
+            this.scrollWidth - (this.clientWidth + this.scrollLeft);
+        var needMoreRows =
+            this.scrollHeight - (this.clientHeight + this.scrollTop);
+
+        if( needMoreCols < 200 ) {
+            editor._currentSheet.addColumns(5);
+            this.scrollLeft -= 500;
+        }
+
+        if( needMoreRows < 120 ) {
+            editor._currentSheet.addColumns(5);
+            this.scrollTop -= 200;
+        }
+
+    }
 }
 Sheet.prototype.insertColHeader = function(columns) {
             select(".col-header ol").appendChild( newEl("li") );
