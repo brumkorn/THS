@@ -37,23 +37,27 @@ var a = console.log.bind(console);
 function SheetEditor() {
     this._currentSheet;
 }
+
+SheetEditor.prototype._DEFAULT_COLUMNS = 26;
+SheetEditor.prototype._DEFAULT_ROWS = 35;
+SheetEditor.prototype.sheetList = [];
+SheetEditor.prototype.footerToolbar = document.querySelector(".footer-toolbar");
+
 function Sheet(sheetID) {
-    this.name = "List " + (sheetID + 1);
+    this.name = "sheet " + (sheetID + 1);
     this.ID = sheetID;
     this._currentRows = 0;
     this._currentColumns = 0;
+    this.sheetContainer = "";
 }
 
-SheetEditor.prototype._DEFAULT_COLUMNS = 26;
-SheetEditor.prototype._DEFAULT_ROWS = 60;
-SheetEditor.prototype.sheetList = [];
-
-SheetEditor.prototype.createTable = function() {
+SheetEditor.prototype.initTable = function() {
     var windowFrame = document.querySelector(".main");
     var sheetContainer =
          windowFrame.appendChild( document.createElement("div") );
 
-    var tableWrapper = sheetContainer.appendChild( document.createElement("div") );
+    var tableWrapper =
+        sheetContainer.appendChild( document.createElement("div") );
     tableWrapper.classList.add("table-wrapper");
 
     var colHeaderWrapper =
@@ -74,56 +78,97 @@ SheetEditor.prototype.createTable = function() {
     var table = tableWrapper.appendChild( document.createElement("table") )
     table.appendChild( document.createElement("tbody") );
 
-    tableWrapper.addEventListener("scroll", pullHeaders);
-    tableWrapper.addEventListener("scroll", dynamicAddCells);
-
-    function pullHeaders () {
-        rowHeader.style.top = 24 - this.scrollTop + "px";
-        colHeader.style.left =  40 - this.scrollLeft + "px";
-    }
-
-    function dynamicAddCells () {
-        var needMoreCols = 
-            this.scrollWidth - (this.clientWidth + this.scrollLeft);
-        var needMoreRows =
-            this.scrollHeight - (this.clientHeight + this.scrollTop);
-
-        if( needMoreCols < 200 ) {
-            editor._currentSheet.addColumns(5);
-        }
-
-        if( needMoreRows < 120 ) {
-            editor._currentSheet.addRows(5);
-        }
-
-    }
-}
-Sheet.prototype.insertColHeader = function(columns) {
-            document.querySelector(".col-header ol")
-                .appendChild( document.createElement("li") );
-}
-Sheet.prototype.insertRowHeader = function() {
-            document.querySelector(".row-header ol")
-                .appendChild( document.createElement("li") );
+    var toolbar = document.querySelector(".footer-toolbar");
+    var select = toolbar.querySelector("select");
+    select.appendChild( document.createElement("option"));
+    var sheetBookbarks = toolbar.querySelector(".sheet-bookmarks");
+    sheetBookbarks.appendChild( document.createElement("div") );
 }
 SheetEditor.prototype.createSheet = function(columns, rows) {
     var rows = rows || this._DEFAULT_ROWS,
-        columns = columns || this._DEFAULT_COLUMNS;
+        columns = columns || this._DEFAULT_COLUMNS,
+        toolbar = this.footerToolbar;
 
     var sheet = new Sheet(this.sheetList.length);
-    this._currentSheet = sheet;
-    this.sheetList.push(sheet);
     
-    var sheetContainer = document.querySelector(".main div:last-child");
-    sheetContainer.id = sheet.ID + "-sheet-container"
-    var tbody = sheetContainer.querySelector("tbody");
 
+    var sheetContainer = document.querySelector(".main>div:last-child");
+    sheetContainer.id = "sheet-container-" + sheet.ID
+    sheet.sheetContainer = 
+        document.querySelector("#sheet-container-" + sheet.ID);
+
+    var option = toolbar.querySelector("select > option:last-child");
+    option.setAttribute("value", sheet.ID);
+    option.textContent = "Sheet" + (sheet.ID + 1);
+
+    var sheetBookmark =
+        toolbar.querySelector(".sheet-bookmarks > div:last-child");
+    sheetBookmark.textContent = "Sheet" + (sheet.ID + 1);
+
+    var sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
+    for (var i = 0; i < sheetBookmarksList.length; i++) {
+        sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
+    }
+
+    sheetBookmark.classList.add("bookmark-current-sheet");
+    if (this.sheetList > 0) {
+        this._currentSheet.sheetContainer.style.display = "none";
+    }
+    this._currentSheet = sheet; 
+    this._currentSheet.sheetContainer.style.display = "initial";
+    this.sheetList.push(sheet);
     sheet.addRows(rows);
     sheet.addColumns(columns);
 }
+SheetEditor.prototype.addNewSheet = function(columns, rows) {
+    this.initTable();
+    this.createSheet(columns, rows);
+    this._currentSheet.initListeners();
 
+    a(editor._currentSheet.name);
+    a("rows: " + editor._currentSheet._currentRows);
+    a("columns: " + editor._currentSheet._currentColumns);
+}
+
+SheetEditor.prototype.initListeners = function() {
+    var toolbar = this.footerToolbar;
+    var select = toolbar.querySelector("select");
+    var newSheetButton = toolbar.querySelector(".new-sheet-button");
+    var that = this;
+
+    select.addEventListener("change", selectSheetHandler);
+    newSheetButton.addEventListener("click", addNewSheetHandler);
+
+    function selectSheetHandler(e) {
+        switchSheet(this.value);
+
+        function switchSheet(index) {
+            var sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
+            for (var i = 0; i < sheetBookmarksList.length; i++) {
+                sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
+            }
+            sheetBookmarksList[index].classList.add("bookmark-current-sheet");
+            that._currentSheet.sheetContainer.style.display = "none";
+            that._currentSheet = that.sheetList[index]; 
+            that._currentSheet.sheetContainer.style.display = "initial";
+        }
+    }
+
+    function addNewSheetHandler() {
+        that.addNewSheet();
+    }
+}
+
+Sheet.prototype.insertColHeader = function(columns) {
+    this.sheetContainer.querySelector(".col-header ol")
+        .appendChild( document.createElement("li") );
+}
+Sheet.prototype.insertRowHeader = function() {
+    this.sheetContainer.querySelector(".row-header ol")
+        .appendChild( document.createElement("li") );
+}
 Sheet.prototype.addRows = function(rows) {
-    var tbody = document.querySelector("tbody");
+    var tbody = this.sheetContainer.querySelector("tbody");
 
     rows = rows || 1;
     this._currentRows += rows;
@@ -139,9 +184,8 @@ Sheet.prototype.addRows = function(rows) {
         }
     }
 }
-
 Sheet.prototype.addColumns = function(columns) {
-    var tbody = document.querySelector("tbody");
+    var tbody = this.sheetContainer.querySelector("tbody");
     var rowList = tbody.querySelectorAll("tr");
 
     columns = columns || 1;
@@ -159,14 +203,45 @@ Sheet.prototype.addColumns = function(columns) {
         }
     }
 }
+Sheet.prototype.initListeners = function () {
+
+    var that = this;
+    this.sheetContainer
+        .querySelector(".table-wrapper")
+        .addEventListener("scroll", pullHeaders);
+    
+    function pullHeaders () {
+        var rowHeader = that.sheetContainer.querySelector(".row-header");
+        var colHeader = that.sheetContainer.querySelector(".col-header");
+        rowHeader.style.top = 24 - this.scrollTop + "px";
+        colHeader.style.left =  40 - this.scrollLeft + "px";
+    }
+
+    this.sheetContainer
+        .querySelector(".table-wrapper")
+        .addEventListener("scroll", dynamicAddCells);
+
+    function dynamicAddCells () {
+        var needMoreCols = 
+            this.scrollWidth - (this.clientWidth + this.scrollLeft);
+        var needMoreRows =
+            this.scrollHeight - (this.clientHeight + this.scrollTop);
+
+        if( needMoreCols < 200 ) {
+            that.addColumns(5);
+        }
+
+        if( needMoreRows < 120 ) {
+            that.addRows(5);
+        }
+    }
+}
 
 var editor = new SheetEditor();
-editor.createTable();
-editor.createSheet();
+editor.addNewSheet(35, 35);
+editor.initListeners();
 
-a(editor._currentSheet.name);
-a("rows: " + editor._currentSheet._currentRows);
-a("columns: " + editor._currentSheet._currentColumns);
+
 /*Old code*/
     /*
     *Create tableWrapper with speifying number of columns and rows.
@@ -259,7 +334,7 @@ a("columns: " + editor._currentSheet._currentColumns);
                 return;
             }
 
-            //backspace produce back page changing-------------------------------------------------------------------------------
+            //backspace produce back sheet changing-------------------------------------------------------------------------------
             // if (e.keyCode === backspace) {
             //     e.target.innerHTML = "";
             //     localStorage.removeItem(currentID);
