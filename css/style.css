@@ -64,10 +64,6 @@ html,body {
     padding-left: 3px;
     padding-top: 34px;
     padding-bottom: 0;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -webkit-user-select: none;
-    user-select: none;  
 }
 
 .menu-button {
@@ -371,7 +367,17 @@ input:focus {
     background-size: 70px 120px;
 }
 
-.menu-button, td, li {
+.not-selectable {
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;  
+}
+
+.menu-bar,
+.footer-toolbar,
+.formulas,
+td, li {
     cursor: default;
     -moz-user-select: none;
     -ms-user-select: none;
