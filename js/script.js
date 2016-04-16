@@ -34,197 +34,399 @@ let a = console.log.bind(console);
 
 ;(function() {
 "use strict";
-function SheetEditor(params) {
-    this._currentSheet = null;
-    this.params = params;
-    this.addNewSheet();
-    this.initListeners();
-}
 
-SheetEditor.prototype._DEFAULT_COLUMNS = 26;
-SheetEditor.prototype._DEFAULT_ROWS = 35;
-SheetEditor.prototype.sheetList = [];
-SheetEditor.prototype.footerToolbar = document.querySelector(".footer-toolbar");
 
-SheetEditor.prototype.initTable = function() {
-    let windowFrame = document.querySelector(".main");
-    let sheetContainer =
-         windowFrame.appendChild( document.createElement("div") );
+class SheetEditor {
 
-    let tableWrapper =
-        sheetContainer.appendChild( document.createElement("div") );
-    tableWrapper.classList.add("table-wrapper");
+    constructor(params) {
+        this._currentSheet = null;
+        this.params = params;
+        this.sheetList = [];
+        this.footerToolbar = document.querySelector(".footer-toolbar");
+        this.addNewSheet();
+        this.initListeners();
+        
+    }
 
-    let colHeaderWrapper =
-        sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
-    colHeaderWrapper.classList.add("col-header-wrapper");
-    colHeaderWrapper.appendChild( document.createElement("div") );
-    let colHeader = 
+    initTable() {
+        let windowFrame = document.querySelector(".main");
+        let sheetContainer =
+             windowFrame.appendChild( document.createElement("div") );
+
+        let tableWrapper =
+            sheetContainer.appendChild( document.createElement("div") );
+        tableWrapper.classList.add("table-wrapper");
+
+        let colHeaderWrapper =
+            sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
+        colHeaderWrapper.classList.add("col-header-wrapper");
         colHeaderWrapper.appendChild( document.createElement("div") );
-    colHeaderWrapper.appendChild( document.createElement("div") );
-    colHeader.classList.add("col-header");
-    colHeader.appendChild( document.createElement("ol") );
+        let colHeader = 
+            colHeaderWrapper.appendChild( document.createElement("div") );
+        colHeaderWrapper.appendChild( document.createElement("div") );
+        colHeader.classList.add("col-header");
+        colHeader.appendChild( document.createElement("ol") );
 
-    let rowHeader = 
-        sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
-    rowHeader.classList.add("row-header");
-    rowHeader.appendChild( document.createElement("ol") );
+        let rowHeader = 
+            sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
+        rowHeader.classList.add("row-header");
+        rowHeader.appendChild( document.createElement("ol") );
 
-    let table = tableWrapper.appendChild( document.createElement("table") )
-    table.appendChild( document.createElement("tbody") );
+        let table = tableWrapper.appendChild( document.createElement("table") )
+        table.appendChild( document.createElement("tbody") );
 
-    let toolbar = document.querySelector(".footer-toolbar");
-    let select = toolbar.querySelector("select");
-    select.appendChild( document.createElement("option"));
-    let sheetBoormarks = toolbar.querySelector(".sheet-bookmarks");
-    sheetBoormarks.appendChild( document.createElement("div") );
-}
-SheetEditor.prototype.createSheet = function(
-    columns = this._DEFAULT_COLUMNS,
-    rows = this._DEFAULT_ROWS) {
-
-    let toolbar = this.footerToolbar;
-    let sheet = new Sheet(this.sheetList.length);
-    this._currentSheet = sheet;
-
-    let sheetContainer = document.querySelector(".main>div:last-child");
-    sheetContainer.id = `sheet-container-${sheet.ID}`;
-    sheet.sheetContainer = sheetContainer;
-
-    let option = toolbar.querySelector("select > option:last-child");
-    option.setAttribute("value", sheet.ID);
-    option.textContent = sheet.name;
-
-    let sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
-    sheetBookmarksList[sheet.ID].id = sheet.ID;
-    sheetBookmarksList[sheet.ID].textContent = option.textContent;
-
-    sheet.addRows(rows);
-    sheet.addColumns(columns);
-    this.sheetList.push(sheet);
-    this.switchSheet(sheet.ID);
-    sheet.initListeners();
-}
-SheetEditor.prototype.addNewSheet = function(columns, rows) {
-    this.initTable();
-    this.createSheet(columns, rows);
-}
-SheetEditor.prototype.switchSheet = function(sheetIndex) {
-    let sheetBookmarksList = 
-        this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
-    let sheetSelectList = this.footerToolbar.querySelectorAll("select > option");
-
-    for (let i = 0; i < this.sheetList.length; i++) {
-        sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
-        sheetSelectList[i].removeAttribute("selected");
+        let toolbar = document.querySelector(".footer-toolbar");
+        let select = toolbar.querySelector("select");
+        select.appendChild( document.createElement("option"));
+        let sheetBoormarks = toolbar.querySelector(".sheet-bookmarks");
+        sheetBoormarks.appendChild( document.createElement("div") );
     }
 
-    sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
-    sheetSelectList[sheetIndex].setAttribute("selected", "true");
+    createSheet(columns = 26, rows = 50) {
+        let toolbar = this.footerToolbar;
+        let sheet = new Sheet(this.sheetList.length);
+        this._currentSheet = sheet;
 
-    if (this.sheetList.length > 0) {
-        this._currentSheet.sheetContainer.style.display = "none";
+        let sheetContainer = document.querySelector(".main>div:last-child");
+        sheetContainer.id = `sheet-container-${sheet.ID}`;
+        sheet.sheetContainer = sheetContainer;
+
+        let option = toolbar.querySelector("select > option:last-child");
+        option.setAttribute("value", sheet.ID);
+        option.textContent = sheet.name;
+
+        let sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
+        sheetBookmarksList[sheet.ID].id = sheet.ID;
+        sheetBookmarksList[sheet.ID].textContent = option.textContent;
+
+        sheet.addRows(rows);
+        sheet.addColumns(columns);
+        this.sheetList.push(sheet);
+        this.switchSheet(sheet.ID);
+        sheet.initListeners();
     }
 
-    this._currentSheet = this.sheetList[sheetIndex];
-    this._currentSheet.sheetContainer.style.display = "initial";
-    a(this._currentSheet);
-}
-SheetEditor.prototype.initListeners = function() {
-    let select = this.footerToolbar.querySelector("select");
-    let newSheetButton = this.footerToolbar.querySelector(".new-sheet-button");
-    let sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks");
-
-    let switchSheetHandler = (event) => {
-        let sheetIndex = event.target.value || event.target.id;
-        this.switchSheet(sheetIndex);
+    addNewSheet(columns, rows) {
+        this.initTable();
+        this.createSheet(columns, rows);
     }
-    select.addEventListener("change", switchSheetHandler);
-    sheetBookmarks.addEventListener("click", switchSheetHandler);
 
-    newSheetButton.addEventListener("click", () => this.addNewSheet());
+    switchSheet(sheetIndex) {
+        let sheetBookmarksList = 
+            this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
+        let sheetSelectList = 
+            this.footerToolbar.querySelectorAll("select > option");
+
+        for (let i = 0; i < this.sheetList.length; i++) {
+            sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
+            sheetSelectList[i].removeAttribute("selected");
+        }
+
+        sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
+        sheetSelectList[sheetIndex].setAttribute("selected", "true");
+
+        if (this.sheetList.length > 0) {
+            this._currentSheet.sheetContainer.style.display = "none";
+        }
+
+        this._currentSheet = this.sheetList[sheetIndex];
+        this._currentSheet.sheetContainer.style.display = "initial";
+        a(this._currentSheet);
+    }
+
+    initListeners() {
+        let select = this.footerToolbar.querySelector("select");
+        let newSheetButton = this.footerToolbar.querySelector(".new-sheet-button");
+        let sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks");
+
+        let switchSheetHandler = (event) => {
+            let sheetIndex = event.target.value || event.target.id;
+            this.switchSheet(sheetIndex);
+        }
+        select.addEventListener("change", switchSheetHandler);
+        sheetBookmarks.addEventListener("click", switchSheetHandler);
+
+        newSheetButton.addEventListener("click", () => this.addNewSheet());
+    }
 }
 
-function Sheet(sheetID) {
-    this.name = `Sheet${sheetID + 1}`;
-    this.ID = sheetID;
-    this._currentRows = 0;
-    this._currentColumns = 0;
-    this.sheetContainer = null;
-}
-Sheet.prototype.insertColHeader = function(columns) {
-    this.sheetContainer.querySelector(".col-header ol")
-        .appendChild( document.createElement("li") );
-}
-Sheet.prototype.insertRowHeader = function() {
-    this.sheetContainer.querySelector(".row-header ol")
-        .appendChild( document.createElement("li") );
-}
-Sheet.prototype.addRows = function(rows = 1) {
-    let tbody = this.sheetContainer.querySelector("tbody");
-    this._currentRows += rows;
+// function SheetEditor(params) {
+//     this._currentSheet = null;
+//     this.params = params;
+//     this.addNewSheet();
+//     this.initListeners();
+// }
 
-    for (let i = 0; i < rows; i++) {
-        let row = tbody.insertRow(-1);
-        this.insertRowHeader();
-        for (let j = 0; j < this._currentColumns; j++) {
-            let cell = row.insertCell(-1);
+//SheetEditor.prototype.footerToolbar = document.querySelector(".footer-toolbar");
 
-            cell.classList.add("data-cell");
-            cell.tabIndex = i + this._currentRows + "";
+// SheetEditor.prototype.initTable = function() {
+//     let windowFrame = document.querySelector(".main");
+//     let sheetContainer =
+//          windowFrame.appendChild( document.createElement("div") );
+
+//     let tableWrapper =
+//         sheetContainer.appendChild( document.createElement("div") );
+//     tableWrapper.classList.add("table-wrapper");
+
+//     let colHeaderWrapper =
+//         sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
+//     colHeaderWrapper.classList.add("col-header-wrapper");
+//     colHeaderWrapper.appendChild( document.createElement("div") );
+//     let colHeader = 
+//         colHeaderWrapper.appendChild( document.createElement("div") );
+//     colHeaderWrapper.appendChild( document.createElement("div") );
+//     colHeader.classList.add("col-header");
+//     colHeader.appendChild( document.createElement("ol") );
+
+//     let rowHeader = 
+//         sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
+//     rowHeader.classList.add("row-header");
+//     rowHeader.appendChild( document.createElement("ol") );
+
+//     let table = tableWrapper.appendChild( document.createElement("table") )
+//     table.appendChild( document.createElement("tbody") );
+
+//     let toolbar = document.querySelector(".footer-toolbar");
+//     let select = toolbar.querySelector("select");
+//     select.appendChild( document.createElement("option"));
+//     let sheetBoormarks = toolbar.querySelector(".sheet-bookmarks");
+//     sheetBoormarks.appendChild( document.createElement("div") );
+// }
+// SheetEditor.prototype.createSheet = function(columns = 26,rows = 50) {
+
+//     let toolbar = this.footerToolbar;
+//     let sheet = new Sheet(this.sheetList.length);
+//     this._currentSheet = sheet;
+
+//     let sheetContainer = document.querySelector(".main>div:last-child");
+//     sheetContainer.id = `sheet-container-${sheet.ID}`;
+//     sheet.sheetContainer = sheetContainer;
+
+//     let option = toolbar.querySelector("select > option:last-child");
+//     option.setAttribute("value", sheet.ID);
+//     option.textContent = sheet.name;
+
+//     let sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
+//     sheetBookmarksList[sheet.ID].id = sheet.ID;
+//     sheetBookmarksList[sheet.ID].textContent = option.textContent;
+
+//     sheet.addRows(rows);
+//     sheet.addColumns(columns);
+//     this.sheetList.push(sheet);
+//     this.switchSheet(sheet.ID);
+//     sheet.initListeners();
+// }
+// SheetEditor.prototype.addNewSheet = function(columns, rows) {
+//     this.initTable();
+//     this.createSheet(columns, rows);
+// }
+
+// SheetEditor.prototype.switchSheet = function(sheetIndex) {
+//     let sheetBookmarksList = 
+//         this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
+//     let sheetSelectList = this.footerToolbar.querySelectorAll("select > option");
+
+//     for (let i = 0; i < this.sheetList.length; i++) {
+//         sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
+//         sheetSelectList[i].removeAttribute("selected");
+//     }
+
+//     sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
+//     sheetSelectList[sheetIndex].setAttribute("selected", "true");
+
+//     if (this.sheetList.length > 0) {
+//         this._currentSheet.sheetContainer.style.display = "none";
+//     }
+
+//     this._currentSheet = this.sheetList[sheetIndex];
+//     this._currentSheet.sheetContainer.style.display = "initial";
+//     a(this._currentSheet);
+// }
+// SheetEditor.prototype.initListeners = function() {
+//     let select = this.footerToolbar.querySelector("select");
+//     let newSheetButton = this.footerToolbar.querySelector(".new-sheet-button");
+//     let sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks");
+
+//     let switchSheetHandler = (event) => {
+//         let sheetIndex = event.target.value || event.target.id;
+//         this.switchSheet(sheetIndex);
+//     }
+//     select.addEventListener("change", switchSheetHandler);
+//     sheetBookmarks.addEventListener("click", switchSheetHandler);
+
+//     newSheetButton.addEventListener("click", () => this.addNewSheet());
+// }
+
+class Sheet{
+
+    constructor(sheetID) {
+        this.name = `Sheet${sheetID + 1}`;
+        this.ID = sheetID;
+        this._currentRows = 0;
+        this._currentColumns = 0;
+        this.sheetContainer = null;
+    }
+
+    insertColHeader() {
+        this.sheetContainer.querySelector(".col-header ol")
+            .appendChild( document.createElement("li") );
+    }
+
+    insertRowHeader() {
+        this.sheetContainer.querySelector(".row-header ol")
+            .appendChild( document.createElement("li") );
+    }
+
+    addRows(rows = 1) {
+        let tbody = this.sheetContainer.querySelector("tbody");
+        this._currentRows += rows;
+
+        for (let i = 0; i < rows; i++) {
+            let row = tbody.insertRow(-1);
+            this.insertRowHeader();
+            for (let j = 0; j < this._currentColumns; j++) {
+                let cell = row.insertCell(-1);
+
+                cell.classList.add("data-cell");
+                cell.tabIndex = i + this._currentRows + "";
+            }
         }
     }
-}
-Sheet.prototype.addColumns = function(columns = 1) {
-    let tbody = this.sheetContainer.querySelector("tbody");
-    let rowList = tbody.querySelectorAll("tr");
-    this._currentColumns += columns;
 
-    for (let i = 0; i < this._currentRows; i++) {
-        for (let j = 0; j < columns; j++) {
-            if (i === 0) {
-                this.insertColHeader();
+    addColumns(columns = 1) {
+        let tbody = this.sheetContainer.querySelector("tbody");
+        let rowList = tbody.querySelectorAll("tr");
+        this._currentColumns += columns;
+
+        for (let i = 0; i < this._currentRows; i++) {
+            for (let j = 0; j < columns; j++) {
+                if (i === 0) {
+                    this.insertColHeader();
+                }
+
+                let cell = rowList[i].insertCell(-1);
+                cell.classList.add("data-cell");
+                cell.tabIndex = this._currentRows + "";
+            }
+        }
+    }
+
+    initListeners() {
+        let pullHeaders = (event) => {
+            let sheet = event.target;
+            let rowHeader = this.sheetContainer.querySelector(".row-header");
+            let colHeader = this.sheetContainer.querySelector(".col-header");
+            rowHeader.style.top = 24 - sheet.scrollTop + "px";
+            colHeader.style.left =  40 - sheet.scrollLeft + "px";
+        }
+
+        let dynamicAddCells = () => {
+            let sheet = event.target;
+            let toEdgeOfSheetCols = 
+                sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
+            let toEdgeOfSheetRows =
+                sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
+
+            if( toEdgeOfSheetCols < 200 ) {
+                this.addColumns(5);
             }
 
-            let cell = rowList[i].insertCell(-1);
-            cell.classList.add("data-cell");
-            cell.tabIndex = this._currentRows + "";
-        }
-    }
-}
-Sheet.prototype.initListeners = function () {
-    let pullHeaders = (event) => {
-        let sheet = event.target;
-        let rowHeader = this.sheetContainer.querySelector(".row-header");
-        let colHeader = this.sheetContainer.querySelector(".col-header");
-        rowHeader.style.top = 24 - sheet.scrollTop + "px";
-        colHeader.style.left =  40 - sheet.scrollLeft + "px";
-    }
-
-    let dynamicAddCells = () => {
-        let sheet = event.target;
-        let toEdgeOfSheetCols = 
-            sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
-        let toEdgeOfSheetRows =
-            sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
-
-        if( toEdgeOfSheetCols < 200 ) {
-            this.addColumns(5);
+            if( toEdgeOfSheetRows < 120 ) {
+                this.addRows(5);
+            }
         }
 
-        if( toEdgeOfSheetRows < 120 ) {
-            this.addRows(5);
-        }
+        this.sheetContainer
+            .querySelector(".table-wrapper")
+            .addEventListener("scroll", pullHeaders);
+        
+        this.sheetContainer
+            .querySelector(".table-wrapper")
+            .addEventListener("scroll", dynamicAddCells);
     }
 
-    this.sheetContainer
-        .querySelector(".table-wrapper")
-        .addEventListener("scroll", pullHeaders);
     
-    this.sheetContainer
-        .querySelector(".table-wrapper")
-        .addEventListener("scroll", dynamicAddCells);
 }
+// function Sheet(sheetID) {
+//     this.name = `Sheet${sheetID + 1}`;
+//     this.ID = sheetID;
+//     this._currentRows = 0;
+//     this._currentColumns = 0;
+//     this.sheetContainer = null;
+// }
+// Sheet.prototype.insertColHeader = function() {
+//     this.sheetContainer.querySelector(".col-header ol")
+//         .appendChild( document.createElement("li") );
+// }
+// Sheet.prototype.insertRowHeader = function() {
+//     this.sheetContainer.querySelector(".row-header ol")
+//         .appendChild( document.createElement("li") );
+// }
+// Sheet.prototype.addRows = function(rows = 1) {
+//     let tbody = this.sheetContainer.querySelector("tbody");
+//     this._currentRows += rows;
+
+//     for (let i = 0; i < rows; i++) {
+//         let row = tbody.insertRow(-1);
+//         this.insertRowHeader();
+//         for (let j = 0; j < this._currentColumns; j++) {
+//             let cell = row.insertCell(-1);
+
+//             cell.classList.add("data-cell");
+//             cell.tabIndex = i + this._currentRows + "";
+//         }
+//     }
+// }
+// Sheet.prototype.addColumns = function(columns = 1) {
+//     let tbody = this.sheetContainer.querySelector("tbody");
+//     let rowList = tbody.querySelectorAll("tr");
+//     this._currentColumns += columns;
+
+//     for (let i = 0; i < this._currentRows; i++) {
+//         for (let j = 0; j < columns; j++) {
+//             if (i === 0) {
+//                 this.insertColHeader();
+//             }
+
+//             let cell = rowList[i].insertCell(-1);
+//             cell.classList.add("data-cell");
+//             cell.tabIndex = this._currentRows + "";
+//         }
+//     }
+// }
+// Sheet.prototype.initListeners = function () {
+//     let pullHeaders = (event) => {
+//         let sheet = event.target;
+//         let rowHeader = this.sheetContainer.querySelector(".row-header");
+//         let colHeader = this.sheetContainer.querySelector(".col-header");
+//         rowHeader.style.top = 24 - sheet.scrollTop + "px";
+//         colHeader.style.left =  40 - sheet.scrollLeft + "px";
+//     }
+
+//     let dynamicAddCells = () => {
+//         let sheet = event.target;
+//         let toEdgeOfSheetCols = 
+//             sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
+//         let toEdgeOfSheetRows =
+//             sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
+
+//         if( toEdgeOfSheetCols < 200 ) {
+//             this.addColumns(5);
+//         }
+
+//         if( toEdgeOfSheetRows < 120 ) {
+//             this.addRows(5);
+//         }
+//     }
+
+//     this.sheetContainer
+//         .querySelector(".table-wrapper")
+//         .addEventListener("scroll", pullHeaders);
+    
+//     this.sheetContainer
+//         .querySelector(".table-wrapper")
+//         .addEventListener("scroll", dynamicAddCells);
+// }
 
 let editor = new SheetEditor();
 
