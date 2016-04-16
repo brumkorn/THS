@@ -92,10 +92,8 @@ class SheetEditor {
 
     createSheet(columns = 26, rows = 50) {
         let toolbar = this.footerToolbar;
-        let sheet = new Sheet(this.sheetList.length);
+        let sheet = new Sheet(columns, rows, this.sheetList.length);
         this._currentSheet = sheet;
-
-
 
         let option = toolbar.querySelector("select > option:last-child");
         option.setAttribute("value", sheet.ID);
@@ -105,11 +103,8 @@ class SheetEditor {
         sheetBookmarksList[sheet.ID].id = sheet.ID;
         sheetBookmarksList[sheet.ID].textContent = option.textContent;
 
-        sheet.addRows(rows);
-        sheet.addColumns(columns);
         this.sheetList.push(sheet);
         this.switchSheet(sheet.ID);
-        sheet.initListeners();
     }
 
     addNewSheet(columns, rows) {
@@ -158,35 +153,38 @@ class SheetEditor {
 
 class Sheet{
 
-    constructor(sheetID) {
+    constructor(columns, rows, sheetID) {
         this.name = `Sheet${sheetID + 1}`;
         this.ID = sheetID;
         this._currentRows = 0;
         this._currentColumns = 0;
         this.sheetContainer = document.querySelector(".main>div:last-child");
         this.sheetContainer.id = `sheet-container-${this.ID}`;
-        this.colHeaderList = null;
-        this.rowHeaderList = null;
-        this.tableWrapper = null;
+
+        this.colHeaderList = this.sheetContainer.querySelector(".col-header ol");
+        this.rowHeaderList = this.sheetContainer.querySelector(".row-header ol");
+        this.tableWrapper = this.sheetContainer.querySelector(".table-wrapper");
+        this.tbody = this.tableWrapper.querySelector("tbody");
+
+        this.addRows(rows);
+        this.addColumns(columns);
+        this.initListeners();
 
     }
 
     insertColHeader() {
-        this.sheetContainer.querySelector(".col-header ol")
-            .appendChild( document.createElement("li") );
+        this.colHeaderList.appendChild( document.createElement("li") );
     }
 
     insertRowHeader() {
-        this.sheetContainer.querySelector(".row-header ol")
-            .appendChild( document.createElement("li") );
+        this.rowHeaderList.appendChild( document.createElement("li") );
     }
 
     addRows(rows = 1) {
-        let tbody = this.sheetContainer.querySelector("tbody");
         this._currentRows += rows;
 
         for (let i = 0; i < rows; i++) {
-            let row = tbody.insertRow(-1);
+            let row = this.tbody.insertRow(-1);
             this.insertRowHeader();
             for (let j = 0; j < this._currentColumns; j++) {
                 let cell = row.insertCell(-1);
@@ -198,8 +196,7 @@ class Sheet{
     }
 
     addColumns(columns = 1) {
-        let tbody = this.sheetContainer.querySelector("tbody");
-        let rowList = tbody.querySelectorAll("tr");
+        let rowList = this.tbody.querySelectorAll("tr");
         this._currentColumns += columns;
 
         for (let i = 0; i < this._currentRows; i++) {
@@ -216,7 +213,7 @@ class Sheet{
     }
 
     initListeners() {
-        let tableWrapper = this.sheetContainer.querySelector(".table-wrapper");
+
         let pullHeaders = (event) => {
             let sheet = event.target;
             let rowHeader = this.sheetContainer.querySelector(".row-header");
@@ -224,9 +221,9 @@ class Sheet{
             rowHeader.style.top = 24 - sheet.scrollTop + "px";
             colHeader.style.left =  40 - sheet.scrollLeft + "px";
         }
-        tableWrapper.addEventListener("scroll", pullHeaders);
+        this.tableWrapper.addEventListener("scroll", pullHeaders);
 
-        let dynamicAddCells = () => {
+        let dynamicAddCells = (event) => {
             let sheet = event.target;
             let toEdgeOfSheetCols = 
                 sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
@@ -241,12 +238,15 @@ class Sheet{
                 this.addRows(5);
             }
         }
-        this.sheetContainer
-            .querySelector(".table-wrapper")
-            .addEventListener("scroll", dynamicAddCells);
+        this.tableWrapper.addEventListener("scroll", dynamicAddCells);
 
-        this.sheetContainer
-            .querySelector(".tableWrapper")
+        let input = document.createElement("input");
+        let invokeInput = (event) => {
+            console.log(event);
+        }
+        this.tableWrapper.addEventListener("dblclick", invokeInput, true);
+
+
     }
 
 
