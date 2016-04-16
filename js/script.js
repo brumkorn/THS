@@ -23,19 +23,22 @@
 
 //         }
 
-//         var c = new Cell;
+//         let c = new Cell;
 
 //         FormulaCell.call(c)
 
 // }
 
 // SheetEditor.DEFAULT_ROWS = 10;
-var a = console.log.bind(console);
+let a = console.log.bind(console);
 
 ;(function() {
 "use strict";
-function SheetEditor() {
-    this._currentSheet;
+function SheetEditor(params) {
+    this._currentSheet = null;
+    this.params = params;
+    this.addNewSheet();
+    this.initListeners();
 }
 
 SheetEditor.prototype._DEFAULT_COLUMNS = 26;
@@ -43,122 +46,112 @@ SheetEditor.prototype._DEFAULT_ROWS = 35;
 SheetEditor.prototype.sheetList = [];
 SheetEditor.prototype.footerToolbar = document.querySelector(".footer-toolbar");
 
-function Sheet(sheetID) {
-    this.name = "sheet " + (sheetID + 1);
-    this.ID = sheetID;
-    this._currentRows = 0;
-    this._currentColumns = 0;
-    this.sheetContainer = "";
-}
-
 SheetEditor.prototype.initTable = function() {
-    var windowFrame = document.querySelector(".main");
-    var sheetContainer =
+    let windowFrame = document.querySelector(".main");
+    let sheetContainer =
          windowFrame.appendChild( document.createElement("div") );
 
-    var tableWrapper =
+    let tableWrapper =
         sheetContainer.appendChild( document.createElement("div") );
     tableWrapper.classList.add("table-wrapper");
 
-    var colHeaderWrapper =
+    let colHeaderWrapper =
         sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
     colHeaderWrapper.classList.add("col-header-wrapper");
     colHeaderWrapper.appendChild( document.createElement("div") );
-    var colHeader = 
+    let colHeader = 
         colHeaderWrapper.appendChild( document.createElement("div") );
     colHeaderWrapper.appendChild( document.createElement("div") );
     colHeader.classList.add("col-header");
     colHeader.appendChild( document.createElement("ol") );
 
-    var rowHeader = 
+    let rowHeader = 
         sheetContainer.insertBefore(document.createElement("div"), tableWrapper);
     rowHeader.classList.add("row-header");
     rowHeader.appendChild( document.createElement("ol") );
 
-    var table = tableWrapper.appendChild( document.createElement("table") )
+    let table = tableWrapper.appendChild( document.createElement("table") )
     table.appendChild( document.createElement("tbody") );
 
-    var toolbar = document.querySelector(".footer-toolbar");
-    var select = toolbar.querySelector("select");
+    let toolbar = document.querySelector(".footer-toolbar");
+    let select = toolbar.querySelector("select");
     select.appendChild( document.createElement("option"));
-    var sheetBookbarks = toolbar.querySelector(".sheet-bookmarks");
-    sheetBookbarks.appendChild( document.createElement("div") );
+    let sheetBoormarks = toolbar.querySelector(".sheet-bookmarks");
+    sheetBoormarks.appendChild( document.createElement("div") );
 }
-SheetEditor.prototype.createSheet = function(columns, rows) {
-    var rows = rows || this._DEFAULT_ROWS,
-        columns = columns || this._DEFAULT_COLUMNS,
-        toolbar = this.footerToolbar;
+SheetEditor.prototype.createSheet = function(
+    columns = this._DEFAULT_COLUMNS,
+    rows = this._DEFAULT_ROWS) {
 
-    var sheet = new Sheet(this.sheetList.length);
-    
+    let toolbar = this.footerToolbar;
+    let sheet = new Sheet(this.sheetList.length);
+    this._currentSheet = sheet;
 
-    var sheetContainer = document.querySelector(".main>div:last-child");
-    sheetContainer.id = "sheet-container-" + sheet.ID
-    sheet.sheetContainer = 
-        document.querySelector("#sheet-container-" + sheet.ID);
+    let sheetContainer = document.querySelector(".main>div:last-child");
+    sheetContainer.id = `sheet-container-${sheet.ID}`;
+    sheet.sheetContainer = sheetContainer;
 
-    var option = toolbar.querySelector("select > option:last-child");
+    let option = toolbar.querySelector("select > option:last-child");
     option.setAttribute("value", sheet.ID);
-    option.textContent = "Sheet" + (sheet.ID + 1);
+    option.textContent = sheet.name;
 
-    var sheetBookmark =
-        toolbar.querySelector(".sheet-bookmarks > div:last-child");
-    sheetBookmark.textContent = "Sheet" + (sheet.ID + 1);
+    let sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
+    sheetBookmarksList[sheet.ID].id = sheet.ID;
+    sheetBookmarksList[sheet.ID].textContent = option.textContent;
 
-    var sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
-    for (var i = 0; i < sheetBookmarksList.length; i++) {
-        sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
-    }
-
-    sheetBookmark.classList.add("bookmark-current-sheet");
-    if (this.sheetList > 0) {
-        this._currentSheet.sheetContainer.style.display = "none";
-    }
-    this._currentSheet = sheet; 
-    this._currentSheet.sheetContainer.style.display = "initial";
-    this.sheetList.push(sheet);
     sheet.addRows(rows);
     sheet.addColumns(columns);
+    this.sheetList.push(sheet);
+    this.switchSheet(sheet.ID);
+    sheet.initListeners();
 }
 SheetEditor.prototype.addNewSheet = function(columns, rows) {
     this.initTable();
     this.createSheet(columns, rows);
-    this._currentSheet.initListeners();
-
-    a(editor._currentSheet.name);
-    a("rows: " + editor._currentSheet._currentRows);
-    a("columns: " + editor._currentSheet._currentColumns);
 }
+SheetEditor.prototype.switchSheet = function(sheetIndex) {
+    let sheetBookmarksList = 
+        this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
+    let sheetSelectList = this.footerToolbar.querySelectorAll("select > option");
 
+    for (let i = 0; i < this.sheetList.length; i++) {
+        sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
+        sheetSelectList[i].removeAttribute("selected");
+    }
+
+    sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
+    sheetSelectList[sheetIndex].setAttribute("selected", "true");
+
+    if (this.sheetList.length > 0) {
+        this._currentSheet.sheetContainer.style.display = "none";
+    }
+
+    this._currentSheet = this.sheetList[sheetIndex];
+    this._currentSheet.sheetContainer.style.display = "initial";
+    a(this._currentSheet);
+}
 SheetEditor.prototype.initListeners = function() {
-    var toolbar = this.footerToolbar;
-    var select = toolbar.querySelector("select");
-    var newSheetButton = toolbar.querySelector(".new-sheet-button");
-    var that = this;
+    let select = this.footerToolbar.querySelector("select");
+    let newSheetButton = this.footerToolbar.querySelector(".new-sheet-button");
+    let sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks");
 
-    select.addEventListener("change", selectSheetHandler);
-    newSheetButton.addEventListener("click", addNewSheetHandler);
-
-    function selectSheetHandler(e) {
-        switchSheet(this.value);
-
-        function switchSheet(index) {
-            var sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
-            for (var i = 0; i < sheetBookmarksList.length; i++) {
-                sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
-            }
-            sheetBookmarksList[index].classList.add("bookmark-current-sheet");
-            that._currentSheet.sheetContainer.style.display = "none";
-            that._currentSheet = that.sheetList[index]; 
-            that._currentSheet.sheetContainer.style.display = "initial";
-        }
+    let switchSheetHandler = (event) => {
+        let sheetIndex = event.target.value || event.target.id;
+        this.switchSheet(sheetIndex);
     }
+    select.addEventListener("change", switchSheetHandler);
+    sheetBookmarks.addEventListener("click", switchSheetHandler);
 
-    function addNewSheetHandler() {
-        that.addNewSheet();
-    }
+    newSheetButton.addEventListener("click", () => this.addNewSheet());
 }
 
+function Sheet(sheetID) {
+    this.name = `Sheet${sheetID + 1}`;
+    this.ID = sheetID;
+    this._currentRows = 0;
+    this._currentColumns = 0;
+    this.sheetContainer = null;
+}
 Sheet.prototype.insertColHeader = function(columns) {
     this.sheetContainer.querySelector(".col-header ol")
         .appendChild( document.createElement("li") );
@@ -167,79 +160,83 @@ Sheet.prototype.insertRowHeader = function() {
     this.sheetContainer.querySelector(".row-header ol")
         .appendChild( document.createElement("li") );
 }
-Sheet.prototype.addRows = function(rows) {
-    var tbody = this.sheetContainer.querySelector("tbody");
-
-    rows = rows || 1;
+Sheet.prototype.addRows = function(rows = 1) {
+    let tbody = this.sheetContainer.querySelector("tbody");
     this._currentRows += rows;
 
-    for (var i = 0; i < rows; i++) {
-        var row = tbody.insertRow(-1);
+    for (let i = 0; i < rows; i++) {
+        let row = tbody.insertRow(-1);
         this.insertRowHeader();
-        for (var j = 0; j < this._currentColumns; j++) {
-            var cell = row.insertCell(-1);
+        for (let j = 0; j < this._currentColumns; j++) {
+            let cell = row.insertCell(-1);
 
             cell.classList.add("data-cell");
             cell.tabIndex = i + this._currentRows + "";
         }
     }
 }
-Sheet.prototype.addColumns = function(columns) {
-    var tbody = this.sheetContainer.querySelector("tbody");
-    var rowList = tbody.querySelectorAll("tr");
-
-    columns = columns || 1;
+Sheet.prototype.addColumns = function(columns = 1) {
+    let tbody = this.sheetContainer.querySelector("tbody");
+    let rowList = tbody.querySelectorAll("tr");
     this._currentColumns += columns;
 
-    for (var i = 0; i < this._currentRows; i++) {
-        for (var j = 0; j < columns; j++) {
+    for (let i = 0; i < this._currentRows; i++) {
+        for (let j = 0; j < columns; j++) {
             if (i === 0) {
                 this.insertColHeader();
             }
 
-            var cell = rowList[i].insertCell(-1);
+            let cell = rowList[i].insertCell(-1);
             cell.classList.add("data-cell");
             cell.tabIndex = this._currentRows + "";
         }
     }
 }
 Sheet.prototype.initListeners = function () {
+    let pullHeaders = (event) => {
+        let sheet = event.target;
+        let rowHeader = this.sheetContainer.querySelector(".row-header");
+        let colHeader = this.sheetContainer.querySelector(".col-header");
+        rowHeader.style.top = 24 - sheet.scrollTop + "px";
+        colHeader.style.left =  40 - sheet.scrollLeft + "px";
+    }
 
-    var that = this;
+    let dynamicAddCells = () => {
+        let sheet = event.target;
+        let toEdgeOfSheetCols = 
+            sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
+        let toEdgeOfSheetRows =
+            sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
+
+        if( toEdgeOfSheetCols < 200 ) {
+            this.addColumns(5);
+        }
+
+        if( toEdgeOfSheetRows < 120 ) {
+            this.addRows(5);
+        }
+    }
+
     this.sheetContainer
         .querySelector(".table-wrapper")
         .addEventListener("scroll", pullHeaders);
     
-    function pullHeaders () {
-        var rowHeader = that.sheetContainer.querySelector(".row-header");
-        var colHeader = that.sheetContainer.querySelector(".col-header");
-        rowHeader.style.top = 24 - this.scrollTop + "px";
-        colHeader.style.left =  40 - this.scrollLeft + "px";
-    }
-
     this.sheetContainer
         .querySelector(".table-wrapper")
         .addEventListener("scroll", dynamicAddCells);
-
-    function dynamicAddCells () {
-        var needMoreCols = 
-            this.scrollWidth - (this.clientWidth + this.scrollLeft);
-        var needMoreRows =
-            this.scrollHeight - (this.clientHeight + this.scrollTop);
-
-        if( needMoreCols < 200 ) {
-            that.addColumns(5);
-        }
-
-        if( needMoreRows < 120 ) {
-            that.addRows(5);
-        }
-    }
 }
 
-var editor = new SheetEditor();
-editor.addNewSheet(35, 35);
-editor.initListeners();
+let editor = new SheetEditor();
+
+
+/*
+    let editor = new SheetEditor({
+        target: '.main2',
+        maxColls: 14,
+        maxRows: 'F',
+        readOnly: true
+    });
+*/
 
 
 /*Old code*/
@@ -261,13 +258,13 @@ editor.initListeners();
         rows = rows || 1000;
         columns = columns || 26;
 
-        var tableWrapper = document.getElementById("tableWrapper");
-        var header = tableWrapper.createTHead();
+        let tableWrapper = document.getElementById("tableWrapper");
+        let header = tableWrapper.createTHead();
         header.id = "header";
-        var body = tableWrapper.appendChild( document.createElement("tbody") );
+        let body = tableWrapper.appendChild( document.createElement("tbody") );
 
-        for (var i = 0; i <= rows; i++) {
-            var row;
+        for (let i = 0; i <= rows; i++) {
+            let row;
             
             if (i === 0) {
                 row = header.insertRow(-1);
@@ -275,9 +272,9 @@ editor.initListeners();
                 row = body.insertRow(-1);
             }
 
-            for (var j = 0; j <= columns; j++) {
-                var cell = row.insertCell(-1);
-                var letter = String.fromCharCode("A".charCodeAt(0) + j - 1);
+            for (let j = 0; j <= columns; j++) {
+                let cell = row.insertCell(-1);
+                let letter = String.fromCharCode("A".charCodeAt(0) + j - 1);
 
                 if (i === 0 && j === 0) {
                 continue;
@@ -312,7 +309,7 @@ editor.initListeners();
 
     //Maybe need to separate into few functions
     function enterData() {
-        var tableWrapper = document.getElementById("tableWrapper");
+        let tableWrapper = document.getElementById("tableWrapper");
 
         tableWrapper.addEventListener("dblclick", invokeInput);
         tableWrapper.addEventListener("keydown", invokeInput);
@@ -323,11 +320,11 @@ editor.initListeners();
         */
 
         function invokeInput(e) {
-            var currentID = e.target.id
-            var input; 
-            var backspace = 8;
-            var deleteKey = 46;
-            var storageValue = localStorage[e.target.id] || "";
+            let currentID = e.target.id
+            let input; 
+            let backspace = 8;
+            let deleteKey = 46;
+            let storageValue = localStorage[e.target.id] || "";
 
             if ( currentID.startsWith("row-head") 
                 || currentID.startsWith("col-head")) {
@@ -372,7 +369,7 @@ editor.initListeners();
             }
 
             function doneEnter(e) {
-                var enterKey = 13;
+                let enterKey = 13;
                 if (e.keyCode === enterKey) {
                     this.blur();
                 }
@@ -388,12 +385,12 @@ editor.initListeners();
     *
     */
     function resetDBs() {
-        var resetButton = document.getElementsByClassName("menu-button")[2];
+        let resetButton = document.getElementsByClassName("menu-button")[2];
 
         resetButton.addEventListener("click", reset); 
 
         function reset(e) {
-            for (var elem in localStorage) {
+            for (let elem in localStorage) {
                 document.getElementById(elem).innerHTML = "";
             }
             localStorage.clear();
@@ -407,7 +404,7 @@ editor.initListeners();
     *
     */
     function saveDB() {
-        var saveButton = document.getElementsByClassName("menu-button")[1];
+        let saveButton = document.getElementsByClassName("menu-button")[1];
 
         saveButton.addEventListener("click", save); 
 
@@ -432,16 +429,16 @@ editor.initListeners();
     *
     */
     function loadData() {
-        var value;
+        let value;
         if (localStorage.length) {
-            for (var elem in localStorage) {
+            for (let elem in localStorage) {
                 value = compute( localStorage[elem] );
                 document.getElementById(elem).innerHTML = value || "";
             }
         } 
         else {
             getServerData("jsonget.php", function(data) {
-                for (var elem in data) {
+                for (let elem in data) {
                     localStorage[elem] = data[elem];
                     value = compute( data[elem] );
                     document.getElementById(elem).innerHTML = value || "";
@@ -483,12 +480,12 @@ editor.initListeners();
     *@param {function} callback function with response handler
     */
     function getServerData(path, callback) {
-        var httpRequest = new XMLHttpRequest();
+        let httpRequest = new XMLHttpRequest();
 
         httpRequest.onreadystatechange = function () {
             if (httpRequest.readyState === 4) {
                 if (httpRequest.status === 200) {
-                    var JSONData = JSON.parse(httpRequest.responseText);
+                    let JSONData = JSON.parse(httpRequest.responseText);
                     if (callback) callback(JSONData);
                 }
             }
@@ -508,14 +505,14 @@ editor.initListeners();
     *@param {function} callback function with response handler
     */
     function postServerData(path, object, callback) {
-        var transition = JSON.stringify(object);
-        var params = "nameKey=" + transition;
-        var httpRequest = new XMLHttpRequest();
+        let transition = JSON.stringify(object);
+        let params = "nameKey=" + transition;
+        let httpRequest = new XMLHttpRequest();
 
         httpRequest.onreadystatechange = function() {
             if (httpRequest.readyState === 4) {
                 if (httpRequest.status === 200) {
-                    var data = httpRequest.responseText;
+                    let data = httpRequest.responseText;
                     if (callback) callback(data);
                 }
             }
