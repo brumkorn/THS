@@ -6,6 +6,10 @@ html,body {
     -webkit-box-sizing: border-box;
     -moz-box-sizing: border-box;
     box-sizing: border-box;
+     -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+    user-select: none;  
     margin: 0;
     padding: 0;
     height: 100%;
@@ -240,7 +244,7 @@ div.bookmark-current-sheet:hover {
     padding: 4px;
 }
 
-.col-header li:before {
+.col-header li::before {
     content: counter(columns, upper-latin) " ";
     counter-increment: columns;
 }
@@ -289,6 +293,7 @@ div.bookmark-current-sheet:hover {
     bottom: 40px;
 }
 
+
 .table-wrapper {
     position: fixed;
     top:138px;
@@ -331,6 +336,10 @@ td {
 
 
 input {
+    -moz-user-select: element;
+    -ms-user-select: element;
+    -webkit-user-select: element;
+    user-select: element;  
     position: relative;
     top: 1px;
     margin: 0;
@@ -379,8 +388,4 @@ input:focus {
 .formulas,
 td, li {
     cursor: default;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -webkit-user-select: none;
-    user-select: none;  
 }

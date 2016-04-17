@@ -35,12 +35,27 @@ let a = console.log.bind(console);
 ;(function() {
 "use strict";
 
+class Utils {
+    static get keyCode() {
+        return {
+            enter: 13,
+            backspace: 8,
+            del: 46,
+            shift: 16,
+            alt: 18,
+            ctrl: 17
+        }
+    }
+}
+
 
 class SheetEditor {
 
     constructor(params = {}) {
 
         let {target = ".main", 
+            columns = 26,
+            rows = 35,
             maxColls = 60,
             maxRows = 300, 
             readOnly = false} = params;
@@ -48,21 +63,28 @@ class SheetEditor {
         this.maxColls = maxColls;
         this.maxRows = maxRows;
         this.readOnly = readOnly;
-
-        this._currentSheet = null;
+        this.columns = Math.abs(columns);
+        this.rows = Math.abs(rows);
+        this._currentSheet;
         this.sheetList = [];
         this.footerToolbar = document.querySelector(".footer-toolbar");
-        this.addNewSheet();
+        this.start();
         this.initListeners();
+
     }
+
+    get name() {
+        return `Editor-for-${this.target.className}-window`;
+    }
+
+
 
     initTable() {
         let windowFrame = this.target;
         let sheetContainer =
-             windowFrame.appendChild( document.createElement("div") );
-
-        let tableWrapper =
-            sheetContainer.appendChild( document.createElement("div") );
+            windowFrame.appendChild( document.createElement("div") ),
+            tableWrapper =
+                sheetContainer.appendChild( document.createElement("div") );
         tableWrapper.classList.add("table-wrapper");
 
         let colHeaderWrapper =
@@ -80,19 +102,19 @@ class SheetEditor {
         rowHeader.classList.add("row-header");
         rowHeader.appendChild( document.createElement("ol") );
 
-        let table = tableWrapper.appendChild( document.createElement("table") )
+        let table = tableWrapper.appendChild( document.createElement("table") );
         table.appendChild( document.createElement("tbody") );
 
-        let toolbar = document.querySelector(".footer-toolbar");
-        let select = toolbar.querySelector("select");
+        let toolbar = document.querySelector(".footer-toolbar"),
+            select = toolbar.querySelector("select");
         select.appendChild( document.createElement("option"));
         let sheetBoormarks = toolbar.querySelector(".sheet-bookmarks");
         sheetBoormarks.appendChild( document.createElement("div") );
     }
 
-    createSheet(columns = 26, rows = 50) {
-        let toolbar = this.footerToolbar;
-        let sheet = new Sheet(columns, rows, this.sheetList.length);
+    createSheet(columns = this.columns, rows = this.rows, loading = false) {
+        let toolbar = this.footerToolbar,
+            sheet = new Sheet(columns, rows, this.sheetList.length);
         this._currentSheet = sheet;
 
         let option = toolbar.querySelector("select > option:last-child");
@@ -100,11 +122,46 @@ class SheetEditor {
         option.textContent = sheet.name;
 
         let sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
-        sheetBookmarksList[sheet.ID].id = sheet.ID;
+        sheetBookmarksList[sheet.ID].id = `${sheet.ID}-sheet-bookmark`;
         sheetBookmarksList[sheet.ID].textContent = option.textContent;
 
         this.sheetList.push(sheet);
         this.switchSheet(sheet.ID);
+
+        if(!loading) {
+            this.saveData();
+        }
+    }
+
+    saveData() {
+        a(JSON.stringify(this.sheetList))
+        let objectData = JSON.stringify(this.sheetList);
+        localStorage.setItem(this.name, objectData);
+    }
+
+    loadData() {
+        let objectData = JSON.parse(localStorage.getItem(this.name));
+        return objectData;
+    }
+    start() {
+
+        if(localStorage[`${this.name}`]) {
+            this.loadSheets();
+            return;
+        }
+       
+        localStorage.setItem(this.name, "");
+        this.addNewSheet();
+
+    }
+
+    loadSheets() {
+        let self = this;
+        let loadedData = this.loadData();
+        loadedData.forEach(function(item) {
+            self.initTable();
+            self.createSheet(item._currentColumns, item._currentRows, true);
+        })
     }
 
     addNewSheet(columns, rows) {
@@ -112,23 +169,51 @@ class SheetEditor {
         this.createSheet(columns, rows);
     }
 
+    //switching is work not optimal. exessive loops and broking after hard clicking
+    //1st variant -toggle all off. togle on new (by query selectors);
+    //2nd variant - toggle current off. make new and toggle on it
     switchSheet(sheetIndex) {
+        a("Switch sheet index: " + sheetIndex);
         let sheetBookmarksList = 
-            this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
-        let sheetSelectList = 
-            this.footerToolbar.querySelectorAll("select > option");
+            this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
+            sheetSelectList = 
+                this.footerToolbar.querySelectorAll("select > option");
 
         for (let i = 0; i < this.sheetList.length; i++) {
             sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
             sheetSelectList[i].removeAttribute("selected");
         }
 
+        sheetBookmarksList[this._currentSheet.ID]
+            .classList
+            .remove("bookmark-current-sheet");
+        sheetSelectList[this._currentSheet.ID].removeAttribute("selected");
+        this._currentSheet.sheetContainer.style.display = "none";
+
         sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
         sheetSelectList[sheetIndex].setAttribute("selected", "true");
 
-        if (this.sheetList.length > 0) {
-            this._currentSheet.sheetContainer.style.display = "none";
-        }
+
+    /*
+    *Need something like this:
+    */
+    /* 
+        let sheetBookmarksList = 
+            this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
+            sheetSelectList = 
+                this.footerToolbar.querySelectorAll("select > option");
+
+
+        sheetBookmarksList[this._currentSheet.ID].classList.remove("bookmark-current-sheet");
+        sheetSelectList[this._currentSheet.ID].removeAttribute("selected");
+        this._currentSheet.sheetContainer.style.display = "none";
+        
+        this._currentSheet = this.sheetList[sheetIndex];
+        this._currentSheet.sheetContainer.style.display = "initial";
+
+        sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
+        sheetSelectList[sheetIndex].setAttribute("selected", "true");
+    */
 
         this._currentSheet = this.sheetList[sheetIndex];
         this._currentSheet.sheetContainer.style.display = "initial";
@@ -136,14 +221,15 @@ class SheetEditor {
     }
 
     initListeners() {
-        let select = this.footerToolbar.querySelector("select");
-        let newSheetButton = this.footerToolbar.querySelector(".new-sheet-button");
-        let sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks");
+        let select = this.footerToolbar.querySelector("select"),
+            newSheetButton = this.footerToolbar.querySelector(".new-sheet-button"),
+            sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks"),
 
-        let switchSheetHandler = (event) => {
-            let sheetIndex = event.target.value || event.target.id;
-            this.switchSheet(sheetIndex);
-        }
+            switchSheetHandler = (event) => {
+                if(!event.target.id) return;
+                let sheetIndex = event.target.value || parseFloat(event.target.id);
+                this.switchSheet(sheetIndex);
+            };
         select.addEventListener("change", switchSheetHandler);
         sheetBookmarks.addEventListener("click", switchSheetHandler);
 
@@ -169,7 +255,6 @@ class Sheet{
         this.addRows(rows);
         this.addColumns(columns);
         this.initListeners();
-
     }
 
     insertColHeader() {
@@ -181,16 +266,16 @@ class Sheet{
     }
 
     addRows(rows = 1) {
-        this._currentRows += rows;
-
         for (let i = 0; i < rows; i++) {
             let row = this.tbody.insertRow(-1);
             this.insertRowHeader();
+            this._currentRows ++;
+
             for (let j = 0; j < this._currentColumns; j++) {
                 let cell = row.insertCell(-1);
 
                 cell.classList.add("data-cell");
-                cell.tabIndex = i + this._currentRows + "";
+                cell.tabIndex = this._currentRows +"";
             }
         }
     }
@@ -207,28 +292,31 @@ class Sheet{
 
                 let cell = rowList[i].insertCell(-1);
                 cell.classList.add("data-cell");
-                cell.tabIndex = this._currentRows + "";
+                cell.tabIndex = i + 1 + "";
             }
         }
     }
 
+    saveToLocalStorage() {
+
+    }
     initListeners() {
 
         let pullHeaders = (event) => {
-            let sheet = event.target;
-            let rowHeader = this.sheetContainer.querySelector(".row-header");
-            let colHeader = this.sheetContainer.querySelector(".col-header");
+            let sheet = event.target,
+                rowHeader = this.sheetContainer.querySelector(".row-header"),
+                colHeader = this.sheetContainer.querySelector(".col-header");
             rowHeader.style.top = 24 - sheet.scrollTop + "px";
             colHeader.style.left =  40 - sheet.scrollLeft + "px";
         }
         this.tableWrapper.addEventListener("scroll", pullHeaders);
 
         let dynamicAddCells = (event) => {
-            let sheet = event.target;
-            let toEdgeOfSheetCols = 
-                sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
-            let toEdgeOfSheetRows =
-                sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
+            let sheet = event.currentTarget,
+                toEdgeOfSheetCols = 
+                    sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft),
+                toEdgeOfSheetRows =
+                    sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
 
             if( toEdgeOfSheetCols < 200 ) {
                 this.addColumns(5);
@@ -241,10 +329,55 @@ class Sheet{
         this.tableWrapper.addEventListener("scroll", dynamicAddCells);
 
         let input = document.createElement("input");
+
+        let inputDone = (event) => {
+                a(event);
+                input.parentNode.innerHTML = input.value;
+                input. value = "";
+            },
+            inputKeyDone = (event) => {
+                if(event.keyCode === Utils.keyCode.enter) {
+                    input.blur();
+                }
+            }
+        input.addEventListener("blur", inputDone);
+        input.addEventListener("keydown", inputKeyDone);
+
+
         let invokeInput = (event) => {
-            console.log(event);
+            if(event.target === input ||
+                event.keyCode === Utils.keyCode.backspace ||
+                event.keyCode === Utils.keyCode.del) {
+                return;
+            }
+
+            if(event.keyCode &&
+                event.keyCode != Utils.keyCode.enter) {
+                event.target.innerHTML = "";
+            }
+
+            input.value = event.target.innerHTML;
+            event.target.innerHTML = "";
+            event.target.appendChild(input);
+            input.focus();
+            a(event);
+            a("CellIndex: " + event.target.cellIndex);
+            a("RowIndex: " + event.target.parentElement.rowIndex);
+        };
+        let clearCellData = (event) => {
+            if(event.keyCode === Utils.keyCode.alt) {
+                event.preventDefault();
+            }
+
+            if(event.keyCode === Utils.keyCode.backspace ||
+                event.keyCode === Utils.keyCode.del) {
+                event.preventDefault();
+                event.target.innerHTML = "";
+            }
         }
-        this.tableWrapper.addEventListener("dblclick", invokeInput, true);
+        this.tableWrapper.addEventListener("dblclick", invokeInput);
+        this.tableWrapper.addEventListener("keypress", invokeInput);
+        this.tableWrapper.addEventListener("keydown", clearCellData);
 
 
     }
@@ -331,6 +464,61 @@ class Sheet{
 let editor = new SheetEditor();
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
     let editor = new SheetEditor({
         target: '.main2',
@@ -341,7 +529,7 @@ let editor = new SheetEditor();
 */
 
 
-/*Old code*/
+/*Old code
     
 
     /*
