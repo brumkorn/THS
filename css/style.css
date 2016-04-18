@@ -313,6 +313,7 @@ td {
     font-size: 11px;
     min-width: 100px;
     width: 100px;
+    max-width: 100px;
     border: solid 1px #c0c0c0;
     padding: 0;
     margin: 0;
@@ -332,6 +333,10 @@ td {
     outline-style: solid;
     outline-width: 2px;
     outline-color: #4C8EFA;
+}
+
+.cell-header-higlight {
+    background-color: red;
 }
 
 

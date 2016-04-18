@@ -86,6 +86,16 @@ class SheetEditor {
         return `Editor-for-${this.target.className}-window`;
     }
 
+    start() {
+        if (localStorage[`${this.name}`]) {
+            this.loadSheets();
+            return;
+        }
+       
+        localStorage.setItem(this.name, "");
+        this.addNewSheet();
+    }
+
     initTable() {
         let windowFrame = this.target;
         let sheetContainer =
@@ -146,7 +156,6 @@ class SheetEditor {
             this.saveData();
             return;
         }
-
     }
 
     saveData() {
@@ -158,15 +167,6 @@ class SheetEditor {
     loadData() {
         let objectData = JSON.parse(localStorage.getItem(this.name));
         return objectData;
-    }
-    start() {
-        if (localStorage[`${this.name}`]) {
-            this.loadSheets();
-            return;
-        }
-       
-        localStorage.setItem(this.name, "");
-        this.addNewSheet();
     }
 
     loadSheets() {
@@ -208,31 +208,31 @@ class SheetEditor {
         sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
         sheetSelectList[sheetIndex].setAttribute("selected", "true");
 
-    /*
-    *Need something like this:
-    */
-    /* 
-        let sheetBookmarksList = 
-            this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
-            sheetSelectList = 
-                this.footerToolbar.querySelectorAll("select > option");
+        /*
+        *Need something like this:
+        */
+        /* 
+            let sheetBookmarksList = 
+                this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
+                sheetSelectList = 
+                    this.footerToolbar.querySelectorAll("select > option");
 
 
-        sheetBookmarksList[this._currentSheet.ID].classList.remove("bookmark-current-sheet");
-        sheetSelectList[this._currentSheet.ID].removeAttribute("selected");
-        this._currentSheet.sheetContainer.style.display = "none";
-        
-        this._currentSheet = this.sheetList[sheetIndex];
-        this._currentSheet.sheetContainer.style.display = "initial";
+            sheetBookmarksList[this._currentSheet.ID].classList.remove("bookmark-current-sheet");
+            sheetSelectList[this._currentSheet.ID].removeAttribute("selected");
+            this._currentSheet.sheetContainer.style.display = "none";
+            
+            this._currentSheet = this.sheetList[sheetIndex];
+            this._currentSheet.sheetContainer.style.display = "initial";
 
-        sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
-        sheetSelectList[sheetIndex].setAttribute("selected", "true");
-    */
+            sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
+            sheetSelectList[sheetIndex].setAttribute("selected", "true");
+        */
 
-        this._currentSheet = this.sheetList[sheetIndex];
-        this._currentSheet.sheetContainer.style.display = "initial";
-        a("Editor's current sheet: ")
-        a(this._currentSheet);
+            this._currentSheet = this.sheetList[sheetIndex];
+            this._currentSheet.sheetContainer.style.display = "initial";
+            a("Editor's current sheet: ")
+            a(this._currentSheet);
     }
 
     initListeners() {
@@ -278,19 +278,6 @@ class Sheet{
         this.initListeners();
     }
 
-    writeLoadedCellsData() {
-        a("Cells data loaded: ")
-        a(this.cellsData);
-        a("Items in cellsData loaded: ")
-        for (let item in this.cellsData) {
-            let currentCell = this.cellsData[item];
-            let targetRow = this.tbody.children[currentCell.rowIndex];
-            let targetCell = targetRow.children[currentCell.colIndex];
-            a("Cell value: " + currentCell.value);
-            a(targetCell);
-            targetCell.innerHTML = currentCell.value;
-        }
-    }
     insertColHeader() {
         this.colHeaderList.appendChild( document.createElement("li") );
     }
@@ -331,10 +318,33 @@ class Sheet{
         }
     }
 
-    saveToLocalStorage() {
-
+    writeLoadedCellsData() {
+        a("Cells data loaded: ")
+        a(this.cellsData);
+        a("Items in cellsData loaded: ")
+        for (let item in this.cellsData) {
+            let currentCell = this.cellsData[item];
+            let targetRow = this.tbody.children[currentCell.rowIndex];
+            let targetCell = targetRow.children[currentCell.colIndex];
+            a("Cell value: " + currentCell.value);
+            a(targetCell);
+            targetCell.innerHTML = currentCell.value;
+        }
     }
+
+    saveToLocalStorage() {
+    }
+
     initListeners() {
+        function getCellCoordinates(event) {
+            let colIndex = event.path[0].cellIndex || event.path[1].cellIndex,
+                rowIndex = event.path[1].rowIndex || event.path[2].rowIndex,
+                cellColPosition = Utils.getNameFromNumber(colIndex),
+            cellRowPosition = rowIndex + 1,
+            cellPosition = cellColPosition + cellRowPosition;
+            return [colIndex, rowIndex, cellPosition];
+        }
+
         let pullHeaders = (event) => {
             let sheet = event.target,
                 rowHeader = this.sheetContainer.querySelector(".row-header"),
@@ -358,27 +368,22 @@ class Sheet{
             if ( toEdgeOfSheetRows < 120 ) {
                 this.addRows(5);
             }
-        }
+        };
         this.tableWrapper.addEventListener("scroll", dynamicAddCells);
 
         let input = document.createElement("input");
-
         let inputDone = (event) => {
-                let colIndex = event.path[1].cellIndex,
-                    rowIndex = event.path[2].rowIndex,
-                    cellColPosition = Utils.getNameFromNumber(colIndex),
-                cellRowPosition = rowIndex + 1,
-                cellPosition = cellColPosition + cellRowPosition;
+                let [colIndex, rowIndex, cellName] = getCellCoordinates(event);
 
-                if(!this.cellsData[cellPosition]) {
-                    this.cellsData[cellPosition] = new Cell(colIndex, rowIndex);
+                if(!this.cellsData[cellName]) {
+                    this.cellsData[cellName] = new Cell(colIndex, rowIndex);
                 }
 
                 input.parentNode.innerHTML = input.value;
-                this.cellsData[cellPosition].value = input.value;
+                this.cellsData[cellName].value = input.value;
 
                 a(this.cellsData);
-                a(this.cellsData[cellPosition]);
+                a(this.cellsData[cellName]);
 
                 input.value = "";
             },
@@ -410,16 +415,19 @@ class Sheet{
             a("RowIndex: " + event.target.parentElement.rowIndex);
         };
         let clearCellData = (event) => {
-            if (event.keyCode === Utils.keyCode.alt) {
+            if (event.keyCode === Utils.keyCode.alt||
+                event.keyCode === Utils.keyCode.backspace) {
                 event.preventDefault();
             }
-
+            if (event.target.innerHTML === "") return;
             if (event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
-                event.preventDefault();
+                let [, , cellName] = getCellCoordinates(event);
+                this.cellsData[cellName].value = "";
                 event.target.innerHTML = "";
             }
-        }
+        };
+
         this.tableWrapper.addEventListener("dblclick", invokeInput);
         this.tableWrapper.addEventListener("keypress", invokeInput);
         this.tableWrapper.addEventListener("keydown", clearCellData);
