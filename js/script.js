@@ -46,6 +46,17 @@ class Utils {
             ctrl: 17
         }
     }
+
+    static getNameFromNumber(num) {
+        let numeric = num % 26;
+        let letter = String.fromCodePoint(65 + numeric);
+        let num2 = Math.floor(num / 26);
+        if (num2 > 0) {
+            return this.getNameFromNumber(num2 - 1) + letter;
+        } else {
+            return letter;
+        }
+    }
 }
 
 
@@ -65,7 +76,7 @@ class SheetEditor {
         this.readOnly = readOnly;
         this.columns = Math.abs(columns);
         this.rows = Math.abs(rows);
-        this._currentSheet;
+        this._currentSheet = {};
         this.sheetList = [];
         this.footerToolbar = document.querySelector(".footer-toolbar");
         this.start();
@@ -76,8 +87,6 @@ class SheetEditor {
     get name() {
         return `Editor-for-${this.target.className}-window`;
     }
-
-
 
     initTable() {
         let windowFrame = this.target;
@@ -114,8 +123,15 @@ class SheetEditor {
 
     createSheet(columns = this.columns, rows = this.rows, loading = false) {
         let toolbar = this.footerToolbar,
-            sheet = new Sheet(columns, rows, this.sheetList.length);
-        this._currentSheet = sheet;
+            sheetID = this.sheetList.length,
+            sheetCellsData = {};
+
+        if(loading) {
+            sheetCellsData = this.loadData()[sheetID].cellsData;
+        }
+
+        let sheet = new Sheet(columns, rows, sheetID, sheetCellsData);
+            this._currentSheet = sheet;
 
         let option = toolbar.querySelector("select > option:last-child");
         option.setAttribute("value", sheet.ID);
@@ -128,14 +144,16 @@ class SheetEditor {
         this.sheetList.push(sheet);
         this.switchSheet(sheet.ID);
 
-        if(!loading) {
+        if (!loading) {
             this.saveData();
+            return;
         }
+
     }
 
     saveData() {
-        a(JSON.stringify(this.sheetList))
         let objectData = JSON.stringify(this.sheetList);
+        a("Saving to local storage: " + objectData);
         localStorage.setItem(this.name, objectData);
     }
 
@@ -144,15 +162,13 @@ class SheetEditor {
         return objectData;
     }
     start() {
-
-        if(localStorage[`${this.name}`]) {
+        if (localStorage[`${this.name}`]) {
             this.loadSheets();
             return;
         }
        
         localStorage.setItem(this.name, "");
         this.addNewSheet();
-
     }
 
     loadSheets() {
@@ -162,6 +178,7 @@ class SheetEditor {
             self.initTable();
             self.createSheet(item._currentColumns, item._currentRows, true);
         })
+        self.switchSheet(0);
     }
 
     addNewSheet(columns, rows) {
@@ -173,7 +190,6 @@ class SheetEditor {
     //1st variant -toggle all off. togle on new (by query selectors);
     //2nd variant - toggle current off. make new and toggle on it
     switchSheet(sheetIndex) {
-        a("Switch sheet index: " + sheetIndex);
         let sheetBookmarksList = 
             this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
             sheetSelectList = 
@@ -182,6 +198,7 @@ class SheetEditor {
         for (let i = 0; i < this.sheetList.length; i++) {
             sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
             sheetSelectList[i].removeAttribute("selected");
+            this.sheetList[i].sheetContainer.style.display = "none";
         }
 
         sheetBookmarksList[this._currentSheet.ID]
@@ -192,7 +209,6 @@ class SheetEditor {
 
         sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
         sheetSelectList[sheetIndex].setAttribute("selected", "true");
-
 
     /*
     *Need something like this:
@@ -217,6 +233,7 @@ class SheetEditor {
 
         this._currentSheet = this.sheetList[sheetIndex];
         this._currentSheet.sheetContainer.style.display = "initial";
+        a("Editor's current sheet: ")
         a(this._currentSheet);
     }
 
@@ -225,8 +242,10 @@ class SheetEditor {
             newSheetButton = this.footerToolbar.querySelector(".new-sheet-button"),
             sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks"),
 
+            // not shure is it right to make such a varification. maybe need better event handling
+
             switchSheetHandler = (event) => {
-                if(!event.target.id) return;
+                if (!event.target.id) return;
                 let sheetIndex = event.target.value || parseFloat(event.target.id);
                 this.switchSheet(sheetIndex);
             };
@@ -234,19 +253,22 @@ class SheetEditor {
         sheetBookmarks.addEventListener("click", switchSheetHandler);
 
         newSheetButton.addEventListener("click", () => this.addNewSheet());
+
+        window.onunload = () => this.saveData();
     }
 }
 
 class Sheet{
 
-    constructor(columns, rows, sheetID) {
+    constructor(columns, rows, sheetID, cellsData) {
         this.name = `Sheet${sheetID + 1}`;
         this.ID = sheetID;
         this._currentRows = 0;
         this._currentColumns = 0;
+        this.cellsData = cellsData;
+       
         this.sheetContainer = document.querySelector(".main>div:last-child");
         this.sheetContainer.id = `sheet-container-${this.ID}`;
-
         this.colHeaderList = this.sheetContainer.querySelector(".col-header ol");
         this.rowHeaderList = this.sheetContainer.querySelector(".row-header ol");
         this.tableWrapper = this.sheetContainer.querySelector(".table-wrapper");
@@ -254,9 +276,23 @@ class Sheet{
 
         this.addRows(rows);
         this.addColumns(columns);
+        this.writeLoadedCellsData();
         this.initListeners();
     }
 
+    writeLoadedCellsData() {
+        a("Cells data loaded: ")
+        a(this.cellsData);
+        a("Items in cellsData loaded: ")
+        for (let item in this.cellsData) {
+            let currentCell = this.cellsData[item];
+            let targetRow = this.tbody.children[currentCell.rowIndex];
+            let targetCell = targetRow.children[currentCell.colIndex];
+            a("Cell value: " + currentCell.value);
+            a(targetCell);
+            targetCell.innerHTML = currentCell.value;
+        }
+    }
     insertColHeader() {
         this.colHeaderList.appendChild( document.createElement("li") );
     }
@@ -301,7 +337,6 @@ class Sheet{
 
     }
     initListeners() {
-
         let pullHeaders = (event) => {
             let sheet = event.target,
                 rowHeader = this.sheetContainer.querySelector(".row-header"),
@@ -318,11 +353,11 @@ class Sheet{
                 toEdgeOfSheetRows =
                     sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
 
-            if( toEdgeOfSheetCols < 200 ) {
+            if ( toEdgeOfSheetCols < 200 ) {
                 this.addColumns(5);
             }
 
-            if( toEdgeOfSheetRows < 120 ) {
+            if ( toEdgeOfSheetRows < 120 ) {
                 this.addRows(5);
             }
         }
@@ -331,27 +366,39 @@ class Sheet{
         let input = document.createElement("input");
 
         let inputDone = (event) => {
-                a(event);
+                let colIndex = event.path[1].cellIndex,
+                    rowIndex = event.path[2].rowIndex,
+                    cellColPosition = Utils.getNameFromNumber(colIndex),
+                cellRowPosition = rowIndex + 1,
+                cellPosition = cellColPosition + cellRowPosition;
+
+                if(!this.cellsData[cellPosition]) {
+                    this.cellsData[cellPosition] = new Cell(colIndex, rowIndex);
+                }
+
                 input.parentNode.innerHTML = input.value;
-                input. value = "";
+                this.cellsData[cellPosition].value = input.value;
+
+                a(this.cellsData)
+                a(this.cellsData[cellPosition]);
+
+                input.value = "";
             },
             inputKeyDone = (event) => {
-                if(event.keyCode === Utils.keyCode.enter) {
+                if (event.keyCode === Utils.keyCode.enter) {
                     input.blur();
                 }
-            }
+            };
         input.addEventListener("blur", inputDone);
         input.addEventListener("keydown", inputKeyDone);
 
-
         let invokeInput = (event) => {
-            if(event.target === input ||
+            if (event.target === input ||
                 event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
                 return;
             }
-
-            if(event.keyCode &&
+            if (event.keyCode &&
                 event.keyCode != Utils.keyCode.enter) {
                 event.target.innerHTML = "";
             }
@@ -365,11 +412,11 @@ class Sheet{
             a("RowIndex: " + event.target.parentElement.rowIndex);
         };
         let clearCellData = (event) => {
-            if(event.keyCode === Utils.keyCode.alt) {
+            if (event.keyCode === Utils.keyCode.alt) {
                 event.preventDefault();
             }
 
-            if(event.keyCode === Utils.keyCode.backspace ||
+            if (event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
                 event.preventDefault();
                 event.target.innerHTML = "";
@@ -378,86 +425,101 @@ class Sheet{
         this.tableWrapper.addEventListener("dblclick", invokeInput);
         this.tableWrapper.addEventListener("keypress", invokeInput);
         this.tableWrapper.addEventListener("keydown", clearCellData);
-
-
     }
 
+    //          OLD CODE !!!!!!!!!!!!!!!!!!!!!
 
+                // function enterData() {
+                //     let tableWrapper = document.getElementById("tableWrapper");
 
-//          OLD CODE !!!!!!!!!!!!!!!!!!!!!
+                //     tableWrapper.addEventListener("dblclick", invokeInput);
+                //     tableWrapper.addEventListener("keydown", invokeInput);
 
-            // function enterData() {
-            //     let tableWrapper = document.getElementById("tableWrapper");
+                //     /*
+                //     * Event handler for dblclick Listner
+                //     * 
+                //     */
 
-            //     tableWrapper.addEventListener("dblclick", invokeInput);
-            //     tableWrapper.addEventListener("keydown", invokeInput);
+                //     function invokeInput(e) {
+                //         let currentID = e.target.id
+                //         let input; 
+                //         let backspace = 8;
+                //         let deleteKey = 46;
+                //         let storageValue = localStorage[e.target.id] || "";
 
-            //     /*
-            //     * Event handler for dblclick Listner
-            //     * 
-            //     */
+                //         if ( currentID.startsWith("row-head") 
+                //             || currentID.startsWith("col-head")) {
+                //             return;
+                //         }
 
-            //     function invokeInput(e) {
-            //         let currentID = e.target.id
-            //         let input; 
-            //         let backspace = 8;
-            //         let deleteKey = 46;
-            //         let storageValue = localStorage[e.target.id] || "";
+                //         //backspace produce back sheet changing-------------------------------------------------------------------------------
+                //         // if (e.keyCode === backspace) {
+                //         //     e.target.innerHTML = "";
+                //         //     localStorage.removeItem(currentID);
+                //         //     return;
+                //         // }
 
-            //         if ( currentID.startsWith("row-head") 
-            //             || currentID.startsWith("col-head")) {
-            //             return;
-            //         }
+                //         if (e.keyCode === deleteKey) {
+                //             e.target.innerHTML = "";
+                //             localStorage.removeItem(currentID);
+                //             return;
+                //         }
 
-            //         //backspace produce back sheet changing-------------------------------------------------------------------------------
-            //         // if (e.keyCode === backspace) {
-            //         //     e.target.innerHTML = "";
-            //         //     localStorage.removeItem(currentID);
-            //         //     return;
-            //         // }
+                //         input = document.createElement("input");
+                //         input.value = storageValue;
+                //         e.target.innerHTML = "";
+                //         e.target.appendChild(input);
+                //         input.focus();
 
-            //         if (e.keyCode === deleteKey) {
-            //             e.target.innerHTML = "";
-            //             localStorage.removeItem(currentID);
-            //             return;
-            //         }
+                //         // cant catch event exception------------------------------------------------------------------------------------------
 
-            //         input = document.createElement("input");
-            //         input.value = storageValue;
-            //         e.target.innerHTML = "";
-            //         e.target.appendChild(input);
-            //         input.focus();
+                //         input.addEventListener("blur", doneClick);
+                //         input.addEventListener("keydown", doneEnter);
 
-            //         // cant catch event exception------------------------------------------------------------------------------------------
+                //         //need Add delete storage key after backspace to ""---------------------------------------------------------------------
 
-            //         input.addEventListener("blur", doneClick);
-            //         input.addEventListener("keydown", doneEnter);
+                //         function doneClick() {
+                //             this.parentNode.innerHTML = compute(this.value);
 
-            //         //need Add delete storage key after backspace to ""---------------------------------------------------------------------
+                //             if (!this.value) {
+                //                 localStorage.removeItem(currentID);
+                //                 return;
+                //             }
 
-            //         function doneClick() {
-            //             this.parentNode.innerHTML = compute(this.value);
+                //             localStorage[currentID] = this.value;
+                //         }
 
-            //             if (!this.value) {
-            //                 localStorage.removeItem(currentID);
-            //                 return;
-            //             }
+                //         function doneEnter(e) {
+                //             let enterKey = 13;
+                //             if (e.keyCode === enterKey) {
+                //                 this.blur();
+                //             }
+                //         }
+                //     }
+                // }
 
-            //             localStorage[currentID] = this.value;
-            //         }
+    //                              OLD CODE ENDS!!!!!!!!!!!!!!!!!
 
-            //         function doneEnter(e) {
-            //             let enterKey = 13;
-            //             if (e.keyCode === enterKey) {
-            //                 this.blur();
-            //             }
-            //         }
-            //     }
-            // }
+}
 
-//                              OLD CODE ENDS!!!!!!!!!!!!!!!!!
+class Cell {
 
-                      
+    constructor(colIndex, rowIndex) {
+        this.colIndex = colIndex;
+        this.rowIndex = rowIndex;
+    }
+
+    get cellColPosition () {
+        return Utils.getNameFromNumber(this.colIndex);
+    }
+
+    get cellRowPosition() {
+        return this.rowIndex + 1;
+    }
+
+    get name() {
+        return `data-cell-${this.cellColPosition + this.cellRowPosition}`;
+    } 
 }
 
 
