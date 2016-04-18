@@ -29,7 +29,6 @@
 
 // }
 
-// SheetEditor.DEFAULT_ROWS = 10;
 let a = console.log.bind(console);
 
 ;(function() {
@@ -44,7 +43,7 @@ class Utils {
             shift: 16,
             alt: 18,
             ctrl: 17
-        }
+        };
     }
 
     static getNameFromNumber(num) {
@@ -58,7 +57,6 @@ class Utils {
         }
     }
 }
-
 
 class SheetEditor {
 
@@ -177,7 +175,7 @@ class SheetEditor {
         loadedData.forEach(function(item) {
             self.initTable();
             self.createSheet(item._currentColumns, item._currentRows, true);
-        })
+        });
         self.switchSheet(0);
     }
 
@@ -379,7 +377,7 @@ class Sheet{
                 input.parentNode.innerHTML = input.value;
                 this.cellsData[cellPosition].value = input.value;
 
-                a(this.cellsData)
+                a(this.cellsData);
                 a(this.cellsData[cellPosition]);
 
                 input.value = "";
@@ -399,7 +397,7 @@ class Sheet{
                 return;
             }
             if (event.keyCode &&
-                event.keyCode != Utils.keyCode.enter) {
+                event.keyCode !== Utils.keyCode.enter) {
                 event.target.innerHTML = "";
             }
 
@@ -426,80 +424,6 @@ class Sheet{
         this.tableWrapper.addEventListener("keypress", invokeInput);
         this.tableWrapper.addEventListener("keydown", clearCellData);
     }
-
-    //          OLD CODE !!!!!!!!!!!!!!!!!!!!!
-
-                // function enterData() {
-                //     let tableWrapper = document.getElementById("tableWrapper");
-
-                //     tableWrapper.addEventListener("dblclick", invokeInput);
-                //     tableWrapper.addEventListener("keydown", invokeInput);
-
-                //     /*
-                //     * Event handler for dblclick Listner
-                //     * 
-                //     */
-
-                //     function invokeInput(e) {
-                //         let currentID = e.target.id
-                //         let input; 
-                //         let backspace = 8;
-                //         let deleteKey = 46;
-                //         let storageValue = localStorage[e.target.id] || "";
-
-                //         if ( currentID.startsWith("row-head") 
-                //             || currentID.startsWith("col-head")) {
-                //             return;
-                //         }
-
-                //         //backspace produce back sheet changing-------------------------------------------------------------------------------
-                //         // if (e.keyCode === backspace) {
-                //         //     e.target.innerHTML = "";
-                //         //     localStorage.removeItem(currentID);
-                //         //     return;
-                //         // }
-
-                //         if (e.keyCode === deleteKey) {
-                //             e.target.innerHTML = "";
-                //             localStorage.removeItem(currentID);
-                //             return;
-                //         }
-
-                //         input = document.createElement("input");
-                //         input.value = storageValue;
-                //         e.target.innerHTML = "";
-                //         e.target.appendChild(input);
-                //         input.focus();
-
-                //         // cant catch event exception------------------------------------------------------------------------------------------
-
-                //         input.addEventListener("blur", doneClick);
-                //         input.addEventListener("keydown", doneEnter);
-
-                //         //need Add delete storage key after backspace to ""---------------------------------------------------------------------
-
-                //         function doneClick() {
-                //             this.parentNode.innerHTML = compute(this.value);
-
-                //             if (!this.value) {
-                //                 localStorage.removeItem(currentID);
-                //                 return;
-                //             }
-
-                //             localStorage[currentID] = this.value;
-                //         }
-
-                //         function doneEnter(e) {
-                //             let enterKey = 13;
-                //             if (e.keyCode === enterKey) {
-                //                 this.blur();
-                //             }
-                //         }
-                //     }
-                // }
-
-    //                              OLD CODE ENDS!!!!!!!!!!!!!!!!!
-
 }
 
 class Cell {
@@ -522,301 +446,5 @@ class Cell {
     } 
 }
 
-
 let editor = new SheetEditor();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-    let editor = new SheetEditor({
-        target: '.main2',
-        maxColls: 14,
-        maxRows: 'F',
-        readOnly: true
-    });
-*/
-
-
-/*Old code
-    
-
-    /*
-    *
-    *
-    *Invoking input by double click on cell. Entering data, saving it to 
-    *local storage and computing formulas after '=' sign.
-    *
-    *
-    */
-
-    //Maybe need to separate into few functions
-    function enterData() {
-        let tableWrapper = document.getElementById("tableWrapper");
-
-        tableWrapper.addEventListener("dblclick", invokeInput);
-        tableWrapper.addEventListener("keydown", invokeInput);
-
-        /*
-        * Event handler for dblclick Listner
-        * 
-        */
-
-        function invokeInput(e) {
-            let currentID = e.target.id
-            let input; 
-            let backspace = 8;
-            let deleteKey = 46;
-            let storageValue = localStorage[e.target.id] || "";
-
-            if ( currentID.startsWith("row-head") 
-                || currentID.startsWith("col-head")) {
-                return;
-            }
-
-            //backspace produce back sheet changing-------------------------------------------------------------------------------
-            // if (e.keyCode === backspace) {
-            //     e.target.innerHTML = "";
-            //     localStorage.removeItem(currentID);
-            //     return;
-            // }
-
-            if (e.keyCode === deleteKey) {
-                e.target.innerHTML = "";
-                localStorage.removeItem(currentID);
-                return;
-            }
-
-            input = document.createElement("input");
-            input.value = storageValue;
-            e.target.innerHTML = "";
-            e.target.appendChild(input);
-            input.focus();
-
-            // cant catch event exception------------------------------------------------------------------------------------------
-
-            input.addEventListener("blur", doneClick);
-            input.addEventListener("keydown", doneEnter);
-
-            //need Add delete storage key after backspace to ""---------------------------------------------------------------------
-
-            function doneClick() {
-                this.parentNode.innerHTML = compute(this.value);
-
-                if (!this.value) {
-                    localStorage.removeItem(currentID);
-                    return;
-                }
-
-                localStorage[currentID] = this.value;
-            }
-
-            function doneEnter(e) {
-                let enterKey = 13;
-                if (e.keyCode === enterKey) {
-                    this.blur();
-                }
-            }
-        }
-    }
-    //need verification of value in storage(ket = data-cell....)
-
-    /*
-    *
-    *Ad event listener to "reset" button.  
-    *Clearing all databases on click;
-    *
-    */
-    function resetDBs() {
-        let resetButton = document.getElementsByClassName("menu-button")[2];
-
-        resetButton.addEventListener("click", reset); 
-
-        function reset(e) {
-            for (let elem in localStorage) {
-                document.getElementById(elem).innerHTML = "";
-            }
-            localStorage.clear();
-        }
-    }
-
-    /*
-    *
-    *Ad event listener to "save" button.  
-    *Saving current local storage state to json db text file on server.
-    *
-    */
-    function saveDB() {
-        let saveButton = document.getElementsByClassName("menu-button")[1];
-
-        saveButton.addEventListener("click", save); 
-
-        function save(e) {
-            postServerData('jsonpost.php', localStorage, function(data) {
-                alert(data);
-            });
-        }
-        
-
-        // function save(e) {
-        //     postServerData("jsonpost.php", localStorage, function(data) {
-        //         alert(data);
-        //     });
-        // }
-    }
-
-    /*
-    *
-    *Loading saved data. Firs looking in localStorage, if localSorage is empty,
-    *loading from json database from server.
-    *
-    */
-    function loadData() {
-        let value;
-        if (localStorage.length) {
-            for (let elem in localStorage) {
-                value = compute( localStorage[elem] );
-                document.getElementById(elem).innerHTML = value || "";
-            }
-        } 
-        else {
-            getServerData("jsonget.php", function(data) {
-                for (let elem in data) {
-                    localStorage[elem] = data[elem];
-                    value = compute( data[elem] );
-                    document.getElementById(elem).innerHTML = value || "";
-                }
-            });
-            
-        }
-    }
-
-    /*
-    *
-    *Computing expressions from storage or database
-    *
-    *@param {string} expression
-    *
-    *@return {primitive} computed result
-    */
-
-    // Formula handler will add here
-
-    //Maybe need varification of JSON objects from storage and text file
-    //somewhere because if input in file was not from save functions in this
-    //app it may produce errors (not a string values, charAt verif not work);
-    function compute(value) {
-        if (typeof(value) === "string" && value.charAt(0) === "=") {
-                value = eval(value.substring(1));
-            }
-        return value;
-    }
-
-
-    /*
-    *
-    *Getting json object with last saved spreadshit with server
-    *POST request. Information saved in the txt file.
-    *
-    *
-    *@param {string} path to php file(server);
-    *@param {function} callback function with response handler
-    */
-    function getServerData(path, callback) {
-        let httpRequest = new XMLHttpRequest();
-
-        httpRequest.onreadystatechange = function () {
-            if (httpRequest.readyState === 4) {
-                if (httpRequest.status === 200) {
-                    let JSONData = JSON.parse(httpRequest.responseText);
-                    if (callback) callback(JSONData);
-                }
-            }
-        };
-
-        httpRequest.open("POST", path);
-        httpRequest.send();
-    }
-    /*
-    *
-    *Post json object with saved spreadshit to server
-    *with POST send. Information saving in the txt file.
-    *
-    *
-    *@param {string} path to php file(server);
-    *@param {object} json-object to send;
-    *@param {function} callback function with response handler
-    */
-    function postServerData(path, object, callback) {
-        let transition = JSON.stringify(object);
-        let params = "nameKey=" + transition;
-        let httpRequest = new XMLHttpRequest();
-
-        httpRequest.onreadystatechange = function() {
-            if (httpRequest.readyState === 4) {
-                if (httpRequest.status === 200) {
-                    let data = httpRequest.responseText;
-                    if (callback) callback(data);
-                }
-            }
-        };
-
-        httpRequest.open('POST', path);
-        httpRequest.setRequestHeader("Content-type",
-                                     "application/x-www-form-urlencoded");
-        httpRequest.send(params); 
-    }
 })();
