@@ -56,6 +56,15 @@ class Utils {
             return letter;
         }
     }
+
+    static getCellCoordinates(event) {
+        let colIndex = event.path[0].cellIndex + "" || event.path[1].cellIndex + "",
+            rowIndex = event.path[1].rowIndex + "" || event.path[2].rowIndex + "",
+            cellColPosition = Utils.getNameFromNumber(colIndex);
+        let cellRowPosition = rowIndex + 1,
+            cellPosition = cellColPosition + cellRowPosition;
+        return [colIndex, rowIndex, cellPosition];
+    }
 }
 
 class SheetEditor {
@@ -239,20 +248,32 @@ class SheetEditor {
         let select = this.footerToolbar.querySelector("select"),
             newSheetButton = this.footerToolbar.querySelector(".new-sheet-button"),
             sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks"),
-
+            resetButton = document.getElementsByClassName("menu-button")[2],
+            saveButton = document.getElementsByClassName("menu-button")[1];
             // not shure is it right to make such a varification. maybe need better event handling
 
-            switchSheetHandler = (event) => {
-                if (!event.target.id) return;
-                let sheetIndex = event.target.value || parseFloat(event.target.id);
-                this.switchSheet(sheetIndex);
-            };
+        let switchSheetHandler = (event) => {
+            if (!event.target.parentElement.className === "sheetBookmarks") {
+                return;
+            }
+            let sheetIndex = event.target.value || parseFloat(event.target.id);
+            this.switchSheet(sheetIndex);
+        };
         select.addEventListener("change", switchSheetHandler);
         sheetBookmarks.addEventListener("click", switchSheetHandler);
 
         newSheetButton.addEventListener("click", () => this.addNewSheet());
 
-        window.onunload = () => this.saveData();
+        let resetDataBases = () => {
+            localStorage.setItem(this.name, "")
+        }
+        resetButton.addEventListener("click", resetDataBases);
+        saveButton.addEventListener("click", () => this.saveData()); 
+
+
+        // window.onunload = () => {
+        //     this.saveData();
+        // }
     }
 }
 
@@ -336,15 +357,6 @@ class Sheet{
     }
 
     initListeners() {
-        function getCellCoordinates(event) {
-            let colIndex = event.path[0].cellIndex || event.path[1].cellIndex,
-                rowIndex = event.path[1].rowIndex || event.path[2].rowIndex,
-                cellColPosition = Utils.getNameFromNumber(colIndex),
-            cellRowPosition = rowIndex + 1,
-            cellPosition = cellColPosition + cellRowPosition;
-            return [colIndex, rowIndex, cellPosition];
-        }
-
         let pullHeaders = (event) => {
             let sheet = event.target,
                 rowHeader = this.sheetContainer.querySelector(".row-header"),
@@ -373,7 +385,7 @@ class Sheet{
 
         let input = document.createElement("input");
         let inputDone = (event) => {
-                let [colIndex, rowIndex, cellName] = getCellCoordinates(event);
+                let [colIndex, rowIndex, cellName] = Utils.getCellCoordinates(event);
 
                 if(!this.cellsData[cellName]) {
                     this.cellsData[cellName] = new Cell(colIndex, rowIndex);
@@ -422,15 +434,26 @@ class Sheet{
             if (event.target.innerHTML === "") return;
             if (event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
-                let [, , cellName] = getCellCoordinates(event);
+                let [, , cellName] = Utils.getCellCoordinates(event);
                 this.cellsData[cellName].value = "";
                 event.target.innerHTML = "";
             }
         };
-
         this.tableWrapper.addEventListener("dblclick", invokeInput);
         this.tableWrapper.addEventListener("keypress", invokeInput);
         this.tableWrapper.addEventListener("keydown", clearCellData);
+
+        let cellHeaderHiglight = (event) => {
+            if(event.target.className != "data-cell") {
+                return;
+            }
+            let [colIndex, rowIndex, ] = Utils.getCellCoordinates(event);
+            this.rowHeaderList.children[rowIndex].classList.toggle("cell-header-higlight");
+            this.colHeaderList.children[colIndex].classList.toggle("cell-header-higlight");
+        };
+        this.tableWrapper.addEventListener("focusin", cellHeaderHiglight);
+        this.tableWrapper.addEventListener("focusout", cellHeaderHiglight);
+
     }
 }
 
