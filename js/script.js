@@ -42,11 +42,19 @@ class Utils {
             del: 46,
             shift: 16,
             alt: 18,
-            ctrl: 17
+            ctrl: 17,
+            arrows: [37, 38, 39, 40],
+            arroRight: 39,
+            arrowLeft: 37,
+            arrowUp: 38,
+            arrowDown: 40
         };
     }
 
     static getNameFromNumber(num) {
+        if (typeof num !== "number") {
+            a("Wrong type in getNameFromNumber" + typeof num);
+        }
         let numeric = num % 26;
         let letter = String.fromCodePoint(65 + numeric);
         let num2 = Math.floor(num / 26);
@@ -58,12 +66,12 @@ class Utils {
     }
 
     static getCellCoordinates(event) {
-        let colIndex = event.path[0].cellIndex + "" || event.path[1].cellIndex + "",
-            rowIndex = event.path[1].rowIndex + "" || event.path[2].rowIndex + "",
+        let colIndex = event.path[0].cellIndex  || event.path[1].cellIndex || 0,
+            rowIndex = event.path[1].rowIndex  || event.path[2].rowIndex || 0,
             cellColPosition = Utils.getNameFromNumber(colIndex);
         let cellRowPosition = rowIndex + 1,
             cellPosition = cellColPosition + cellRowPosition;
-        return [colIndex, rowIndex, cellPosition];
+        return [rowIndex, colIndex, cellPosition];
     }
 }
 
@@ -169,7 +177,6 @@ class SheetEditor {
 
     saveData() {
         let objectData = JSON.stringify(this.sheetList);
-        a("Saving to local storage: " + objectData);
         localStorage.setItem(this.name, objectData);
     }
 
@@ -240,8 +247,6 @@ class SheetEditor {
 
             this._currentSheet = this.sheetList[sheetIndex];
             this._currentSheet.sheetContainer.style.display = "initial";
-            a("Editor's current sheet: ")
-            a(this._currentSheet);
     }
 
     initListeners() {
@@ -295,7 +300,7 @@ class Sheet{
 
         this.addRows(rows);
         this.addColumns(columns);
-        this.writeLoadedCellsData();
+        this.loadCellsData();
         this.initListeners();
     }
 
@@ -339,17 +344,27 @@ class Sheet{
         }
     }
 
-    writeLoadedCellsData() {
-        a("Cells data loaded: ")
-        a(this.cellsData);
-        a("Items in cellsData loaded: ")
+    findCellOnSheet(rowIndex, colIndex) {
+        let targetRow = this.tbody.children[rowIndex];
+        let targetCell = targetRow.children[colIndex];
+        return targetCell;
+    }
+
+    loadCellsData() {
         for (let item in this.cellsData) {
             let currentCell = this.cellsData[item];
+            this.cellsData[item] = new Cell(
+                currentCell.rowIndex,
+                currentCell.colIndex,
+                currentCell._value
+            );
+            currentCell = this.cellsData[item];
+            a(currentCell);
+            a(currentCell.computedValue);
+            a(currentCell.name);
             let targetRow = this.tbody.children[currentCell.rowIndex];
             let targetCell = targetRow.children[currentCell.colIndex];
-            a("Cell value: " + currentCell.value);
-            a(targetCell);
-            targetCell.innerHTML = currentCell.value;
+            targetCell.innerHTML = currentCell.computedValue;
         }
     }
 
@@ -384,30 +399,11 @@ class Sheet{
         this.tableWrapper.addEventListener("scroll", dynamicAddCells);
 
         let input = document.createElement("input");
-        let inputDone = (event) => {
-                let [colIndex, rowIndex, cellName] = Utils.getCellCoordinates(event);
-
-                if(!this.cellsData[cellName]) {
-                    this.cellsData[cellName] = new Cell(colIndex, rowIndex);
-                }
-
-                input.parentNode.innerHTML = input.value;
-                this.cellsData[cellName].value = input.value;
-
-                a(this.cellsData);
-                a(this.cellsData[cellName]);
-
-                input.value = "";
-            },
-            inputKeyDone = (event) => {
-                if (event.keyCode === Utils.keyCode.enter) {
-                    input.blur();
-                }
-            };
-        input.addEventListener("blur", inputDone);
-        input.addEventListener("keydown", inputKeyDone);
 
         let invokeInput = (event) => {
+            a(event);
+            let [rowIndex, colIndex, cellName] = Utils
+                    .getCellCoordinates(event);
             if (event.target === input ||
                 event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
@@ -415,18 +411,51 @@ class Sheet{
             }
             if (event.keyCode &&
                 event.keyCode !== Utils.keyCode.enter) {
-                event.target.innerHTML = "";
+                input.value = "";
+            } else if (this.cellsData[cellName]) {
+                input.value = this.cellsData[cellName].value;
             }
-
-            input.value = event.target.innerHTML;
+            else {
+                input.value = "";
+            }
             event.target.innerHTML = "";
             event.target.appendChild(input);
             input.focus();
-            a(event);
-            a("CellIndex: " + event.target.cellIndex);
-            a("RowIndex: " + event.target.parentElement.rowIndex);
         };
+
+        let inputDone = (event) => {
+                let [rowIndex, colIndex, cellName] = Utils
+                    .getCellCoordinates(event);
+
+                if(input.value === "") {
+                    input.parentNode.innerHTML = "";
+                    delete this.cellsData[cellName];
+                    return;
+                } 
+                if (!this.cellsData[cellName] && input.value !== "") {
+                    this.cellsData[cellName] = new Cell(rowIndex, colIndex);
+                }
+                this.cellsData[cellName].value = input.value;
+                input.parentNode.innerHTML = this.cellsData[cellName].computedValue;
+                input.value = "";
+            },
+            inputKeyDone = (event) => {
+                if (event.keyCode === Utils.keyCode.enter) {
+                    let [rowIndex, colIndex, ] = Utils.getCellCoordinates(event);
+                    let nextFocusCell = this
+                        .findCellOnSheet(rowIndex + 1, colIndex);
+                    //nextFocusCell.focus();
+                    input.blur();
+                }
+            };
+        input.addEventListener("blur", inputDone);
+        input.addEventListener("keydown", inputKeyDone);
+
+        // if clear - need to delete this cell
         let clearCellData = (event) => {
+            if (event.target === input) {
+                return;
+            }
             if (event.keyCode === Utils.keyCode.alt||
                 event.keyCode === Utils.keyCode.backspace) {
                 event.preventDefault();
@@ -435,7 +464,7 @@ class Sheet{
             if (event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
                 let [, , cellName] = Utils.getCellCoordinates(event);
-                this.cellsData[cellName].value = "";
+                delete this.cellsData[cellName];
                 event.target.innerHTML = "";
             }
         };
@@ -444,24 +473,50 @@ class Sheet{
         this.tableWrapper.addEventListener("keydown", clearCellData);
 
         let cellHeaderHiglight = (event) => {
-            if(event.target.className != "data-cell") {
-                return;
-            }
-            let [colIndex, rowIndex, ] = Utils.getCellCoordinates(event);
-            this.rowHeaderList.children[rowIndex].classList.toggle("cell-header-higlight");
-            this.colHeaderList.children[colIndex].classList.toggle("cell-header-higlight");
+            let [rowIndex, colIndex, ] = Utils.getCellCoordinates(event);
+            this.rowHeaderList.children[rowIndex]
+                .classList.toggle("cell-header-higlight");
+            this.colHeaderList.children[colIndex]
+                .classList.toggle("cell-header-higlight");
         };
         this.tableWrapper.addEventListener("focusin", cellHeaderHiglight);
         this.tableWrapper.addEventListener("focusout", cellHeaderHiglight);
+        input.addEventListener("blur", cellHeaderHiglight);
 
+        let changeFocus = (event) => {
+            if (event.target === input && Utils.keyCode.arrows.includes(event.keyCode)) {
+                //event.preventDefault();
+                return;
+            }
+            if ( Utils.keyCode.arrows.includes(event.keyCode) ) {
+                event.preventDefault();
+            }
+            let [rowIndex, colIndex, ] = Utils.getCellCoordinates(event);
+            switch (event.keyCode) {
+                case Utils.keyCode.arrowLeft:
+                    this.findCellOnSheet(rowIndex, colIndex - 1).focus();
+                    break;
+                case Utils.keyCode.arroRight:
+                    this.findCellOnSheet(rowIndex, colIndex + 1).focus();
+                    break;
+                case Utils.keyCode.arrowDown:
+                    this.findCellOnSheet(rowIndex + 1, colIndex).focus();
+                    break;
+                case Utils.keyCode.arrowUp:
+                    this.findCellOnSheet(rowIndex - 1, colIndex).focus();
+                    break;
+            }
+        }
+        this.tableWrapper.addEventListener("keydown", changeFocus);
     }
 }
 
 class Cell {
 
-    constructor(colIndex, rowIndex) {
+    constructor(rowIndex, colIndex, value) {
         this.colIndex = colIndex;
         this.rowIndex = rowIndex;
+        this.value = value;
     }
 
     get cellColPosition () {
@@ -474,8 +529,29 @@ class Cell {
 
     get name() {
         return `data-cell-${this.cellColPosition + this.cellRowPosition}`;
-    } 
-}
+    }
 
+    get value() {
+        return this._value;
+    }
+
+    set value(value) {
+        this._value = value;
+    }
+
+    get computedValue() {
+        let newValue = this.value;
+        if ( newValue.startsWith("=") ) {
+            newValue = newValue.slice(1);
+            a(newValue.split(""));
+            newValue = eval(newValue);
+        }
+        return newValue;
+    }
+
+    findCellOnSheet() {
+        
+    }
+}
 let editor = new SheetEditor();
 })();
