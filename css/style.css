@@ -102,11 +102,24 @@ html,body {
 
 .formulas {
     height: 20px;
-    padding-left: 5px;
     background-color: white;
 }
 
+.formulas > span {
+    padding-left: 5px;
+    line-height: 20px;
+    display: inline-block;
+    width: 40px;
+    border-right: 1px solid #c0c0c0;
+}
+.formulas > div {
+    line-height: 20px;
+    display: inline-block;
+}
 
+.formulas-input {
+
+}
 
 .footer-toolbar-align {
     position:fixed;
