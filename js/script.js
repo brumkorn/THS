@@ -55,9 +55,11 @@ class Utils {
         if (typeof num !== "number") {
             a("Wrong type in getNameFromNumber" + typeof num);
         }
-        let numeric = num % 26;
-        let letter = String.fromCodePoint(65 + numeric);
-        let num2 = Math.floor(num / 26);
+        let upperLatinLetters = 26,
+            upperLatinAUnicode = 65,
+            numeric = num % upperLatinLetters;
+        let letter = String.fromCodePoint(upperLatinAUnicode + numeric);
+        let num2 = Math.floor(num / upperLatinLetters);
         if (num2 > 0) {
             return this.getNameFromNumber(num2 - 1) + letter;
         } else {
@@ -82,8 +84,8 @@ class Utils {
     static getCellCoordinates(data) {
         if (typeof data === "object") {
             let event = data;
-            let colIndex = event.path[0].cellIndex  || event.path[1].cellIndex || 0,
-                rowIndex = event.path[1].rowIndex  || event.path[2].rowIndex || 0,
+            let colIndex = event.path[0].cellIndex || event.path[1].cellIndex || 0,
+                rowIndex = event.path[1].rowIndex || event.path[2].rowIndex || 0,
                 cellColPosition = Utils.getNameFromNumber(colIndex);
             let cellRowPosition = rowIndex + 1,
                 cellPosition = cellColPosition + cellRowPosition;
@@ -94,7 +96,7 @@ class Utils {
             };
         }
         if (typeof data === "string") {
-            let cellName = data.toUpperCase();
+            let cellName = data;
             let cellNameArr = cellName.match(/([A-Z]+)|([0-9]+)/g);
             let rowIndex = cellNameArr[1] - 1;
             let colIndex = Utils.getNumberFromName(cellNameArr[0]);
@@ -112,18 +114,13 @@ class Utils {
             cellLinkPattern = /([A-Z]+[0-9]+)/gi,
             inputArr = inputExp.match(inputArrPattern),
             links = inputExp.match(cellLinkPattern);
-        // let returnArr = inputArr.map(function(current) {
-        //     let matched = current.match(cellLinkPattern);
-        //     if (matched) {
-        //         return sheet.cellsData[ matched[0].toUpperCase() ];
-        //     }
-        //     return current;
-        // });
+
         let returnArr = inputArr.map(function(current) {
             let matched = current.match(cellLinkPattern);
             if (matched) {
+                let cellName = matched[0].toUpperCase();
                 let {rowIndex, colIndex} = 
-                    Utils.getCellCoordinates(matched[0]);
+                    Utils.getCellCoordinates( cellName );
                 return Utils.findCellOnSheet(rowIndex, colIndex, tbody);
             }
             return current
@@ -135,8 +132,8 @@ class Utils {
         };
     }
 
-    static computeValue(value, tbody) {
-        let valueArr = Utils.parseExpression(value, tbody).parsedInput;
+    static computeValue(inputExp, tbody) {
+        let valueArr = Utils.parseExpression(inputExp, tbody).parsedInput;
         let valueString = ``;
         for (let item of valueArr) {
             if (typeof item === "object") {
@@ -159,7 +156,7 @@ class SheetEditor {
             columns = 26,
             rows = 35,
             maxColls = 60,
-            maxRows = 300, 
+            maxRows = 35, 
             readOnly = false
         } = params;
         this.target = document.querySelector(target);
@@ -185,7 +182,7 @@ class SheetEditor {
             this.loadSheets();
             return;
         }
-       
+
         localStorage.setItem(this.name, "");
         this.addNewSheet();
     }
@@ -193,7 +190,7 @@ class SheetEditor {
     initTable() {
         let windowFrame = this.target;
         let sheetContainer =
-            windowFrame.appendChild( document.createElement("div") ),
+                windowFrame.appendChild( document.createElement("div") ),
             tableWrapper =
                 sheetContainer.appendChild( document.createElement("div") );
         tableWrapper.classList.add("table-wrapper");
@@ -226,12 +223,13 @@ class SheetEditor {
     }
 
     createSheet(columns = this.columns, rows = this.rows, loading = false) {
+        a(rows);
         let toolbar = this.footerToolbar,
             sheetID = this.sheetList.length,
             sheetCellsData = {};
 
         if(loading) {
-            sheetCellsData = this.loadData()[sheetID].cellsData;
+            sheetCellsData = this.loadData()[sheetID].cellsList;
         }
 
         let sheet = new Sheet(columns, rows, sheetID, sheetCellsData);
@@ -343,17 +341,17 @@ class SheetEditor {
             if (!event.target.parentElement.className === "sheetBookmarks") {
                 return;
             }
+
             let sheetIndex = event.target.value || parseFloat(event.target.id);
             this.switchSheet(sheetIndex);
         };
         select.addEventListener("change", switchSheetHandler);
         sheetBookmarks.addEventListener("click", switchSheetHandler);
-
         newSheetButton.addEventListener("click", () => this.addNewSheet());
 
         let resetDataBases = () => {
-            localStorage.setItem(this.name, "")
-        }
+            localStorage.setItem(this.name, "");
+        };
         resetButton.addEventListener("click", resetDataBases);
         saveButton.addEventListener("click", () => this.saveData()); 
 
@@ -366,12 +364,12 @@ class SheetEditor {
 
 class Sheet{
 
-    constructor(columns, rows, sheetID, cellsData) {
+    constructor(columns, rows, sheetID, cellsList) {
         this.name = `Sheet${sheetID + 1}`;
         this.ID = sheetID;
         this._currentRows = 0;
         this._currentColumns = 0;
-        this.cellsData = cellsData;
+        this.cellsList = cellsList;
        
         this.sheetContainer = document.querySelector(".main>div:last-child");
         this.sheetContainer.id = `sheet-container-${this.ID}`;
@@ -379,6 +377,9 @@ class Sheet{
         this.rowHeaderList = this.sheetContainer.querySelector(".row-header ol");
         this.tableWrapper = this.sheetContainer.querySelector(".table-wrapper");
         this.tbody = this.tableWrapper.querySelector("tbody");
+        this.rowHeader = this.sheetContainer.querySelector(".row-header");
+        this.colHeader = this.sheetContainer.querySelector(".col-header");
+        this.corner = this.sheetContainer.querySelector(".col-header-wrapper div:first-child");
 
         this.addRows(rows);
         this.addColumns(columns);
@@ -402,7 +403,6 @@ class Sheet{
 
             for (let j = 0; j < this._currentColumns; j++) {
                 let cell = row.insertCell(-1);
-
                 cell.classList.add("data-cell");
                 cell.tabIndex = this._currentRows +"";
             }
@@ -427,30 +427,37 @@ class Sheet{
     }
 
     loadCellsData() {
-        for (let item in this.cellsData) {
-            let currentCell = this.cellsData[item];
-            this.cellsData[item] = new Cell(
+        for (let item in this.cellsList) {
+            let currentCell = this.cellsList[item];
+            this.cellsList[item] = new Cell(
                 currentCell.rowIndex,
                 currentCell.colIndex,
                 this.tbody,
-                currentCell._value
-                
+                currentCell._value,
+                currentCell._computedValue
             );
-            currentCell = this.cellsData[item];
+            currentCell = this.cellsList[item];
             let targetRow = this.tbody.children[currentCell.rowIndex];
             let targetCell = targetRow.children[currentCell.colIndex];
-            targetCell.innerHTML = currentCell.computedValue;
+            targetCell.innerHTML = currentCell._computedValue;
         }
     }
 
     initListeners() {
+        let cornerHeight = parseFloat( 
+            window.getComputedStyle(this.corner).height 
+            ),
+            cornerWidth = parseFloat( 
+                window.getComputedStyle(this.corner).width 
+            );
 
         let pullHeaders = (event) => {
-            let sheet = event.target,
-                rowHeader = this.sheetContainer.querySelector(".row-header"),
-                colHeader = this.sheetContainer.querySelector(".col-header");
-            rowHeader.style.top = 24 - sheet.scrollTop + "px";
-            colHeader.style.left =  40 - sheet.scrollLeft + "px";
+            let rowHeader = this.rowHeader,
+                colHeader = this.colHeader;
+            rowHeader.style.top = 
+                cornerHeight - this.tableWrapper.scrollTop + "px";
+            colHeader.style.left = 
+                cornerWidth - this.tableWrapper.scrollLeft + "px";
         }
         this.tableWrapper.addEventListener("scroll", pullHeaders);
 
@@ -462,11 +469,11 @@ class Sheet{
                     sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
 
             if ( toEdgeOfSheetCols < 200 ) {
-                this.addColumns(5);
+                this.addColumns(10);
             }
 
             if ( toEdgeOfSheetRows < 120 ) {
-                this.addRows(5);
+                this.addRows(10);
             }
         };
         this.tableWrapper.addEventListener("scroll", dynamicAddCells);
@@ -475,18 +482,18 @@ class Sheet{
         //let noInput = input.value === "" || input.value.trim() === "=";
 
         let invokeInput = (event) => {
-            let {rowIndex, colIndex, cellName} = Utils
-                    .getCellCoordinates(event);
             if (event.target === input ||
                 event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
                 return;
             }
+
+            let {cellName} = Utils.getCellCoordinates(event);
             if (event.keyCode &&
                 event.keyCode !== Utils.keyCode.enter) {
                 input.value = "";
-            } else if (this.cellsData[cellName]) {
-                input.value = this.cellsData[cellName].value;
+            } else if (this.cellsList[cellName]) {
+                input.value = this.cellsList[cellName].value;
             }
             else {
                 input.value = "";
@@ -495,6 +502,8 @@ class Sheet{
             event.target.appendChild(input);
             input.focus();
         };
+        this.tableWrapper.addEventListener("dblclick", invokeInput);
+        this.tableWrapper.addEventListener("keypress", invokeInput);
 
         let inputDone = (event) => {
                 let {rowIndex, colIndex, cellName} = Utils
@@ -502,37 +511,41 @@ class Sheet{
 
                 if(input.value === "") {
                     input.parentNode.innerHTML = "";
-                    delete this.cellsData[cellName];
+                    delete this.cellsList[cellName];
                     return;
                 } 
-                if (!this.cellsData[cellName] && input.value !== "") {
-                    a(this);
-                    this.cellsData[cellName] = 
+                if (!this.cellsList[cellName] && input.value !== "") {
+                    this.cellsList[cellName] = 
                         new Cell(rowIndex, colIndex, this.tbody);
                 }
-                this.cellsData[cellName].value = input.value;
+                this.cellsList[cellName].value = input.value;
+
                 input.parentNode.innerHTML = 
-                    this.cellsData[cellName].computedValue;
+                    this.cellsList[cellName].computedValue;
                 input.value = "";
-            },
-            inputKeyDone = (event) => {
+                synchronize();
+        };
+        input.addEventListener("blur", inputDone);
+
+        let inputKeyDone = (event) => {
                 if (event.keyCode === Utils.keyCode.enter) {
                     let {rowIndex, colIndex} =
                         Utils.getCellCoordinates(event);
-                    let nextFocusCell =
-                        Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody);
+                    // let nextFocusCell =
+                    //     Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody);
                     //nextFocusCell.focus();
                     input.blur();
                 }
-            },
-            cellSynchronize= () => {
-                let links = Utils.parseExpression(input.value).parsedLinks;
-            }
-        input.addEventListener("blur", inputDone);
+            };
         input.addEventListener("keydown", inputKeyDone);
-        input.addEventListener("change", cellSynchronize);
 
-        // if clear - need to delete this cell
+        let synchronize = () => {
+            for (let cell in this.cellsList) {
+                let cellOnSheet = this.cellsList[cell].cellNode;
+                cellOnSheet.innerHTML = this.cellsList[cell].computedValue;
+            }
+        };
+
         let clearCellData = (event) => {
             if (event.target === input) {
                 return;
@@ -545,12 +558,10 @@ class Sheet{
             if (event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
                 let {cellName} = Utils.getCellCoordinates(event);
-                delete this.cellsData[cellName];
+                delete this.cellsList[cellName];
                 event.target.innerHTML = "";
             }
         };
-        this.tableWrapper.addEventListener("dblclick", invokeInput);
-        this.tableWrapper.addEventListener("keypress", invokeInput);
         this.tableWrapper.addEventListener("keydown", clearCellData);
 
         let cellHeaderHiglight = (event) => {
@@ -571,22 +582,22 @@ class Sheet{
                 return;
             }
             if ( Utils.keyCode.arrows.includes(event.keyCode) ) {
+                let {rowIndex, colIndex} = Utils.getCellCoordinates(event);
                 event.preventDefault();
-            }
-            let {rowIndex, colIndex} = Utils.getCellCoordinates(event);
-            switch (event.keyCode) {
-                case Utils.keyCode.arrowLeft:
-                    Utils.findCellOnSheet(rowIndex, colIndex - 1, this.tbody).focus();
-                    break;
-                case Utils.keyCode.arroRight:
-                    Utils.findCellOnSheet(rowIndex, colIndex + 1, this.tbody).focus();
-                    break;
-                case Utils.keyCode.arrowDown:
-                    Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody).focus();
-                    break;
-                case Utils.keyCode.arrowUp:
-                    Utils.findCellOnSheet(rowIndex - 1, colIndex, this.tbody).focus();
-                    break;
+                switch (event.keyCode) {
+                    case Utils.keyCode.arrowLeft:
+                        Utils.findCellOnSheet(rowIndex, colIndex - 1, this.tbody).focus();
+                        break;
+                    case Utils.keyCode.arroRight:
+                        Utils.findCellOnSheet(rowIndex, colIndex + 1, this.tbody).focus();
+                        break;
+                    case Utils.keyCode.arrowDown:
+                        Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody).focus();
+                        break;
+                    case Utils.keyCode.arrowUp:
+                        Utils.findCellOnSheet(rowIndex - 1, colIndex, this.tbody).focus();
+                        break;
+                }
             }
         }
         this.tableWrapper.addEventListener("keydown", changeFocus);
@@ -595,11 +606,16 @@ class Sheet{
 
 class Cell {
 
-    constructor(rowIndex, colIndex, tbody, value) {
+    constructor(rowIndex, colIndex, tbody, value, computedValue) {
         this.colIndex = colIndex;
         this.rowIndex = rowIndex;
         this.value = value;
         this.tbody = tbody
+        this.computedValue = computedValue
+    }
+
+    get cellNode() {
+        return Utils.findCellOnSheet(this.rowIndex, this.colIndex, this.tbody)
     }
 
     get cellColPosition () {
@@ -611,7 +627,7 @@ class Cell {
     }
 
     get name() {
-        return `data-cell-${this.cellColPosition + this.cellRowPosition}`;
+        return `${this.cellColPosition + this.cellRowPosition}`;
     }
 
     get value() {
@@ -622,13 +638,17 @@ class Cell {
         this._value = value;
     }
 
+    set computedValue(value) {
+        this._computedValue = value;
+    }
+
     get computedValue() {
         let newValue = this.value;
         if ( newValue.startsWith("=") ) {
-            a(this.tbody);
             newValue = Utils.computeValue( newValue.slice(1), this.tbody );
         }
-        return newValue;
+        this._computedValue = newValue;
+        return this._computedValue;
     }
 }
 let editor = new SheetEditor();
