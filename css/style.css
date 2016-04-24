@@ -129,6 +129,10 @@ html,body {
     z-index: 99;
 }
 
+.formula-mode-picked-cell {
+    border: 2px dotted red;
+}
+
 .footer-toolbar {
     background-color: #EBEBEB;
     box-shadow: inset 0 1px 0 0 #fff;
