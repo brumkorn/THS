@@ -52,6 +52,16 @@ class Utils {
         };
     }
 
+    static get regExp() {
+        return {
+            operators: /[\+\-\*\/]/,
+            cellLink: /([A-Z]+[0-9]+)/gi,
+            cellLinkEnding: /([A-Z]+[0-9]+)$/i,
+            pickingInputEnding: /([\=\+\-\*\/])$|([\=\+\-\*\/]+[A-Z]+[0-9]+)$/i
+
+        }
+    }
+
     static getNameFromNumber(num) {
         if (typeof num !== "number") {
             a("Wrong type in getNameFromNumber" + typeof num);
@@ -123,7 +133,7 @@ class Utils {
 
     static parseExpression(inputExp, tbody) {
         let inputArrPattern = /([A-Z]+[0-9]+)|([0-9]+)|([\+\-\*\/]+)|([\(\)])/gi,
-            operators = /[\+\-\*\/]/,
+            operators = Utils.regExp.operators,
             cellLinkPattern = /([A-Z]+[0-9]+)/gi,
             inputArr = inputExp.match(inputArrPattern) || [],
             links = inputExp.match(cellLinkPattern) || [];
@@ -148,7 +158,7 @@ class Utils {
     static computeValue(inputExp, tbody) {
         let expressionArr = Utils.parseExpression(inputExp, tbody).parsedInput;
         let expressionStr = "",
-            operators = /[\+\-\*\/]/,
+            operators = Utils.regExp.operators,
             doublePlusesAndMinuses = /([\-]{2})|([\+]{2})/g,
             plusMinus = /(\+\-)|(\-\+)/g;
 
@@ -159,11 +169,11 @@ class Utils {
                 continue;
             }
             while (item.length >1) {
-                if ( item.search(doublePlusesAndMinuses) === 0) {
+                if ( item.search(doublePlusesAndMinuses) >= 0) {
                     item = item.replace(doublePlusesAndMinuses, "+");
                 } 
 
-                if ( item.search(plusMinus) === 0) {
+                if ( item.search(plusMinus) >= 0) {
                     item = item.replace(plusMinus, "-")
                 }
             }
@@ -178,14 +188,16 @@ class Utils {
             }
         }
 
-        if(!expressionStr) return "";
+        if (!expressionStr) return "";
 
-        if (expressionStr.charAt(0).search(operators) === 0) {
+        if (expressionStr.charAt(0).search(operators) >= 0) {
             expressionStr = `${0 + expressionStr}`;
         }
-        if (expressionStr[expressionStr.length - 1].search(operators) === 0) {
+        if (expressionStr[expressionStr.length - 1].search(operators) >= 0) {
             expressionStr = `${expressionStr + 0}`;
         }
+
+        if (expressionStr.search(Utils.regExp.cellLink) >= 0) return "";
 
         return eval(expressionStr);
     }
@@ -427,9 +439,11 @@ class Sheet{
         this.corner = this.sheetContainer
                     .querySelector(".col-header-wrapper div:first-child");
 
+        this.inputConsole = document.querySelector(".input-console");
         this.addRows(rows);
         this.addColumns(columns);
         this.loadCellsData();
+        this.initFocus();
         this.initListeners();
     }
 
@@ -489,16 +503,18 @@ class Sheet{
         }
     }
 
+    initFocus() {
+        Utils.findCellOnSheet(0, 0, this.tbody).classList.add("focused-cell");
+        this.rowHeaderList.children[0].classList.add("cell-header-highlight");
+        this.colHeaderList.children[0].classList.add("cell-header-highlight");
+    }
+
     initListeners() {
         let cornerHeight = parseFloat( 
                 window.getComputedStyle(this.corner).height),
             cornerWidth = parseFloat( 
                 window.getComputedStyle(this.corner).width);
-
-        // let testHandler = (event) => {
-            
-        // }
-        // this.tableWrapper.addEventListener("focusin", testHandler);
+        this.inputConsole = document.querySelector(".input-console");
 
         let pullHeadersHandler = (event) => {
             let rowHeader = this.rowHeader,
@@ -528,10 +544,113 @@ class Sheet{
         this.tableWrapper.addEventListener("scroll", dynamicAddCellsHandler);
 
         let input = document.createElement("input");
-        //let noInput = input.value === "" || input.value.trim() === "=";
+        let focusinCell = (event) => {
+            if(this.formulaMode === true) return;
 
-        let invokeInputHandler = (event) => {
-            if (event.target === input ||
+            if(event.relatedTarget && event.target === input) { 
+                event.relatedTarget.classList.toggle("focused-input-cell")
+                return; 
+            }
+
+            if(!event.relatedTarget) {
+                let lastFocusedCell = this.tbody.querySelector(".focused-cell");
+
+                if (lastFocusedCell) {
+                    lastFocusedCell.classList.remove("focused-cell");
+                }
+            }
+
+            if(!event.relatedTarget || event.relatedTarget === input) {
+                if (event.target === input) {
+                    return;
+                } else if (event.relatedTarget) {
+                    let lastFocusedInputCell = this
+                                            .tbody
+                                            .querySelector(".focused-input-cell");
+                    lastFocusedInputCell.classList.remove("focused-input-cell");
+                } 
+            }
+            event.target.classList.toggle("focused-cell");
+        };
+
+        let focusoutCell = (event) => {
+            if(this.formulaMode === true) return;
+            if(!event.relatedTarget) return;
+
+            if (event.relatedTarget && 
+                    event.relatedTarget.classList.contains("focused-input-cell")) {
+                event.relatedTarget.classList.toggle("focused-input-cell");
+            }
+            event.target.classList.toggle("focused-cell");
+        };
+        this.tableWrapper.addEventListener("focusin", focusinCell);
+        this.tableWrapper.addEventListener("focusout", focusoutCell);
+
+        let headerHighlightIn = (event) => {
+            if(this.formulaMode === true) return;
+
+
+            let rowIndex = event.target.parentElement.rowIndex;
+            let colIndex = event.target.cellIndex;
+
+            if(event.relatedTarget && event.target === input) {
+                let rowIndex = event.relatedTarget.parentElement.rowIndex;
+                let colIndex = event.relatedTarget.cellIndex;
+                this.rowHeaderList
+                    .children[rowIndex]
+                    .classList
+                    .toggle("cell-header-highlight");
+                this.colHeaderList
+                    .children[colIndex]
+                    .classList
+                    .toggle("cell-header-highlight");
+
+                return;
+            } 
+
+            if(event.target === input) return;
+
+            if(!event.relatedTarget || event.relatedTarget === input) {
+                let lastRowHeader = this
+                                    .rowHeaderList
+                                    .querySelector(".cell-header-highlight");
+                let lastColHeader = this
+                                    .colHeaderList
+                                    .querySelector(".cell-header-highlight");
+                if (lastRowHeader && lastColHeader) {
+                    lastRowHeader.classList.remove("cell-header-highlight");
+                    lastColHeader.classList.remove("cell-header-highlight");
+                }
+            }
+
+            this.rowHeaderList
+                .children[rowIndex]
+                .classList
+                .toggle("cell-header-highlight");
+            this.colHeaderList
+                .children[colIndex]
+                .classList
+                .toggle("cell-header-highlight");
+        }
+
+        let headerHighlightOut = (event) => {
+            if(this.formulaMode === true) return;
+            if(!event.relatedTarget) return;
+            if(event.target === input) return;
+
+            let rowIndex = event.target.parentElement.rowIndex;
+            let colIndex = event.target.cellIndex;
+            this.rowHeaderList.children[rowIndex]
+                .classList.toggle("cell-header-highlight");
+            this.colHeaderList.children[colIndex]
+                .classList.toggle("cell-header-highlight");
+        }
+        this.tableWrapper.addEventListener("focusin", headerHighlightIn);
+        this.tableWrapper.addEventListener("focusout", headerHighlightOut);
+
+        let invokeInputHandler = (event, cellNode) => {
+            if (this.formulaMode === true ||
+                event.target === input ||
                 event.keyCode === Utils.keyCode.backspace ||
                 event.keyCode === Utils.keyCode.del) {
                 return;
@@ -549,7 +668,7 @@ class Sheet{
             else {
                 input.value = "";
             }
-
+            this.inputConsole.value = input.value;
             event.target.innerHTML = "";
             event.target.appendChild(input);
             input.focus();
@@ -557,8 +676,21 @@ class Sheet{
         this.tableWrapper.addEventListener("dblclick", invokeInputHandler);
         this.tableWrapper.addEventListener("keypress", invokeInputHandler);
 
+
+        let consoleFocusHandler = (event) => {
+
+        }
+        this.inputConsole.addEventListener("focus", consoleFocusHandler);
+
+        let consoleInputHandler = (event) => {
+
+        }
+        this.inputConsole.addEventListener("input", consoleInputHandler);
+
         let inputDoneHandler = (event) => {
-            if(this.formulaMode === true) return;
+            if (this.formulaMode === true) return;
+            if(!event.relatedTarget) return;
+
             let {rowIndex, colIndex, cellName} = Utils
                 .getCellCoordinates(event);
 
@@ -572,9 +704,14 @@ class Sheet{
                     new Cell(rowIndex, colIndex, this.tbody);
             }
             this.cellsList[cellName].value = input.value;
-            input.parentElement.innerHTML = input.value;
-            synchronize();
+
+            
+                input.parentElement.innerHTML = input.value;
+                synchronize();
+            
+
             input.value = "";
+            this.inputConsole.value = input.value;
         };
         input.addEventListener("blur", inputDoneHandler);
 
@@ -584,10 +721,11 @@ class Sheet{
                         Utils.getCellCoordinates(event);
 
                     formulaModeToggle(true);
-                    // let nextFocusCell =
-                    //     Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody);
-                    //nextFocusCell.focus();
-                    input.blur();
+                    let nextFocusCell =
+                        Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody);
+                    setTimeout(function() {
+                        nextFocusCell.focus();
+                    }, 0);
                 }
             };
         input.addEventListener("keydown", inputKeyDoneHandler);
@@ -596,13 +734,44 @@ class Sheet{
             if (event.target === input) {
                 return
             }
+            
+            if (input.value.search(Utils.regExp.pickingInputEnding) >= 0) {
+                let linkEndingPos = input
+                                    .value
+                                    .search(Utils.regExp.cellLinkEnding);
+                let {cellName} = Utils.getCellCoordinates(event);
+                if(linkEndingPos >= 0 ) {
+                    let lastPickName = input.value.slice(linkEndingPos);
+                    let {rowIndex, colIndex} = Utils
+                                            .getCellCoordinates(lastPickName);
+                    let lastCellNode = Utils
+                                    .findCellOnSheet(rowIndex, colIndex, this.tbody);
 
-            event.target.classList.add("formula-mode-picked-cell");
-            let {cellName} = Utils.getCellCoordinates(event);
-            input.value += cellName;
+                    lastCellNode.classList.remove("formula-mode-picked-cell");
+                    input.value = input.value.slice(0, linkEndingPos);
+                }
+                event.target.classList.add("formula-mode-picked-cell");
+                input.value += cellName;
+                this.inputConsole.value = input.value;
+            }
+
         };
 
-        let enforcedInputFocusHandler = (event) => {
+        let translateToConsoleHandler = (event) => {
+            if (event.target !== input) {
+                let {cellName} = Utils.getCellCoordinates(event);
+
+                if (this.cellsList[cellName] instanceof Cell) {
+                    this.inputConsole.value = this.cellsList[cellName].value;
+                } else {
+                    this.inputConsole.value = event.target.innerHTML;
+                }
+                
+            }
+        }
+        this.tableWrapper.addEventListener("click", translateToConsoleHandler)
+
+        let forcedFormulaModeFocusHandler = (event) => {
             input.parentElement.focus();
             input.focus();
         };
@@ -615,11 +784,11 @@ class Sheet{
             }
 
             if (this.formulaMode) {
-                input.addEventListener("blur", enforcedInputFocusHandler)
+                input.addEventListener("blur", forcedFormulaModeFocusHandler)
                 this.tableWrapper
                     .addEventListener("click", formulaPickCellHandler); 
             } else {
-                input.removeEventListener("blur", enforcedInputFocusHandler);
+                input.removeEventListener("blur", forcedFormulaModeFocusHandler);
                 this.tableWrapper
                     .removeEventListener("click", formulaPickCellHandler); 
                 let pickedCellsNodes = this
@@ -634,6 +803,7 @@ class Sheet{
 
         let inputValueChangeHandler = (event) => {
             formulaModeToggle();
+            this.inputConsole.value = input.value;
         };
         input.addEventListener("input", inputValueChangeHandler);
 
@@ -662,18 +832,6 @@ class Sheet{
             }
         };
         this.tableWrapper.addEventListener("keydown", clearCellDataHandler);
-
-        let cellHeaderHiglightHandler = (event) => {
-            if(this.formulaMode === true) return;
-            let {rowIndex, colIndex} = Utils.getCellCoordinates(event);
-            this.rowHeaderList.children[rowIndex]
-                .classList.toggle("cell-header-higlight");
-            this.colHeaderList.children[colIndex]
-                .classList.toggle("cell-header-higlight");
-        };
-        this.tableWrapper.addEventListener("focusin", cellHeaderHiglightHandler);
-        this.tableWrapper.addEventListener("focusout", cellHeaderHiglightHandler);
-        input.addEventListener("blur", cellHeaderHiglightHandler);
 
         let changeFocusHandler = (event) => {
             if (event.target === input &&
