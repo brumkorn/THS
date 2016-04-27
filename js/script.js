@@ -302,7 +302,6 @@ class SheetEditor {
     }
 
     createSheet(columns = this.columns, rows = this.rows, loading = false) {
-        a(rows);
         let toolbar = this.footerToolbar,
             sheetID = this.sheetList.length,
             sheetCellsData = {};
@@ -372,38 +371,27 @@ class SheetEditor {
             this.sheetList[i].sheetContainer.style.display = "none";
         }
 
-        sheetBookmarksList[this._currentSheet.ID]
-            .classList
-            .remove("bookmark-current-sheet");
-        sheetSelectList[this._currentSheet.ID].removeAttribute("selected");
-        this._currentSheet.sheetContainer.style.display = "none";
-
         sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
         sheetSelectList[sheetIndex].setAttribute("selected", "true");
 
-        /*
-        *Need something like this:
-        */
-        /* 
-            let sheetBookmarksList = 
+        this._currentSheet = this.sheetList[sheetIndex];
+        this._currentSheet.sheetContainer.style.display = "initial";
+    }
+
+    deleteSheet(delSheetIndex) {
+        let sheetBookmarks = 
+                this.footerToolbar.querySelector(".sheet-bookmarks"),
+            sheetBookmarksList =
                 this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
-                sheetSelectList = 
-                    this.footerToolbar.querySelectorAll("select > option");
-
-
-            sheetBookmarksList[this._currentSheet.ID].classList.remove("bookmark-current-sheet");
-            sheetSelectList[this._currentSheet.ID].removeAttribute("selected");
-            this._currentSheet.sheetContainer.style.display = "none";
-            
-            this._currentSheet = this.sheetList[sheetIndex];
-            this._currentSheet.sheetContainer.style.display = "initial";
-
-            sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
-            sheetSelectList[sheetIndex].setAttribute("selected", "true");
-        */
-
-            this._currentSheet = this.sheetList[sheetIndex];
-            this._currentSheet.sheetContainer.style.display = "initial";
+            sheetSelect =
+                this.footerToolbar.querySelector("select"),
+            sheetSelectList = 
+                this.footerToolbar.querySelectorAll("select > option"),
+            removedSheet = this.sheetList.splice(delSheetIndex)[0];
+        this.target.removeChild(removedSheet.sheetContainer);
+        sheetBookmarks.removeChild(sheetBookmarksList[delSheetIndex]);
+        sheetSelect.removeChild(sheetSelectList[delSheetIndex]);
+        this.saveData();
     }
 
     initListeners() {
@@ -412,27 +400,37 @@ class SheetEditor {
                 this.footerToolbar.querySelector(".new-sheet-button"),
             sheetBookmarks =
                 this.footerToolbar.querySelector(".sheet-bookmarks"),
+            saveButton = document.getElementsByClassName("menu-button")[1],
             resetButton = document.getElementsByClassName("menu-button")[2],
-            saveButton = document.getElementsByClassName("menu-button")[1];
-            // not shure is it right to make such a varification. maybe need better event handling
+            deleteSheetButton = document.getElementsByClassName("menu-button")[3]
 
-        let switchSheetHandler = (event) => {
-            a(event);
-            a(event.target.tagName)
+        let switchSheetHdlr = (event) => {
             if (event.target.parentElement.className === "sheet-bookmarks" ||
                     event.target.tagName === "SELECT") {
                 let sheetIndex = event.target.value || parseFloat(event.target.id);
                 this.switchSheet(sheetIndex);
             }
         };
-        select.addEventListener("change", switchSheetHandler);
-        sheetBookmarks.addEventListener("click", switchSheetHandler);
-        newSheetButton.addEventListener("click", () => this.addNewSheet());
-
-        let resetDataBases = () => {
+        let resetDataBasesHdlr = () => {
             localStorage.setItem(this.name, "");
         };
-        resetButton.addEventListener("click", resetDataBases);
+        let deleteSheetHndlr = () => {
+            let decision = confirm(
+`                       Warning! 
+
+Are you shure you want to delete ${this._currentSheet.name}?
+`
+            );
+            if (!decision) return;
+            let delSheetID = this._currentSheet.ID;
+            this.switchSheet(this._currentSheet.ID - 1);
+            this.deleteSheet(delSheetID);
+        }
+        newSheetButton.addEventListener("click", () => this.addNewSheet() );
+        select.addEventListener("change", switchSheetHdlr);
+        sheetBookmarks.addEventListener("click", switchSheetHdlr);
+        deleteSheetButton.addEventListener("click", deleteSheetHndlr);
+        resetButton.addEventListener("click", resetDataBasesHdlr);
         saveButton.addEventListener("click", () => this.saveData()); 
 
 
@@ -543,26 +541,99 @@ class Sheet{
         this.colHeaderList.children[0].classList.add("cell-header-highlight");
     }
 
-    initListeners() {
+    listenersControl(active = true) {
         let cornerHeight = parseFloat( 
                 window.getComputedStyle(this.corner).height
             ),
             cornerWidth = parseFloat( 
                 window.getComputedStyle(this.corner).width
-            ),
-            input = document.createElement("input");
+            );
 
-        let pullHeadersHandler = (event) => {
+        this.cellInput = document.createElement("input");
+        let input = this.cellInput;
+
+        let removeLastFocus = () => {
+            this.focusedCell
+                .classList
+                .remove("focused-cell", "focused-input-cell");
+        };
+        let inputDone = () => {
+            if (this.formulaMode === true) return;
+
+            let {rowIndex, colIndex, cellName} = Utils
+                .getCellCoordinates(input.parentNode);
+
+            if(input.value === "") {
+                input.parentNode.innerHTML = "";
+                delete this.cellsList[cellName];
+                return;
+            } 
+            if (!this.cellsList[cellName] && input.value !== "") {
+                this.cellsList[cellName] = 
+                    new Cell(rowIndex, colIndex, this.tbody);
+            }
+            this.cellsList[cellName].value = input.value;
+
+            input.parentElement.innerHTML = input.value;
+            synchronize();
+
+            input.value = "";
+            this.inputConsole.value = input.value;
+        };
+        let translateToConsole = (event) => {
+            if (!this.formulaMode && event.target.tagName === "TD") {
+                let {cellName} = Utils.getCellCoordinates(event);
+
+                if (this.cellsList[cellName] instanceof Cell) {
+                    this.inputConsole.value = this.cellsList[cellName].value;
+                } else {
+                    this.inputConsole.value = event.target.innerHTML;
+                }
+            }
+        };
+        let formulaModeToggle = (inputDone = false) => {
+            if (inputDone) {
+                this.formulaMode = false;
+            } else {
+                this.formulaMode = (input.value[0] === "=") ? true : false;
+            }
+
+            if (this.formulaMode) {
+                input.addEventListener("blur", forcedFormulaModeFocusHdlr);
+                this.inputConsole.addEventListener("blur", forcedFormulaModeFocusHdlr);
+                this.tableWrapper
+                    .addEventListener("click", formulaPickCellHdlr); 
+            } else {
+                input.removeEventListener("blur", forcedFormulaModeFocusHdlr);
+                this.inputConsole.removeEventListener("blur", forcedFormulaModeFocusHdlr);
+                this.tableWrapper
+                    .removeEventListener("click", formulaPickCellHdlr); 
+
+                let pickedCellsNodes = this
+                                .tableWrapper
+                                .querySelectorAll(".formula-mode-picked-cell");
+
+                for (let i = 0; i < pickedCellsNodes.length; i++) {
+                    pickedCellsNodes[i].classList.remove("formula-mode-picked-cell");
+                }
+            }
+        };
+        let synchronize = () => {
+            for (let cell in this.cellsList) {
+                let cellOnSheet = this.cellsList[cell].cellNode;
+                cellOnSheet.innerHTML = this.cellsList[cell].computedValue;
+            }
+        };
+
+        let pullHeadersHdlr = (event) => {
             let rowHeader = this.rowHeader,
                 colHeader = this.colHeader;
             rowHeader.style.top = 
                 cornerHeight - this.tableWrapper.scrollTop + "px";
             colHeader.style.left = 
                 cornerWidth - this.tableWrapper.scrollLeft + "px";
-        }
-        this.tableWrapper.addEventListener("scroll", pullHeadersHandler);
-
-        let dynamicAddCellsHandler = (event) => {
+        };
+        let dynamicAddCellsHdlr = (event) => {
             let sheet = event.currentTarget,
                 toEdgeOfSheetCols = 
                     sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft),
@@ -577,15 +648,7 @@ class Sheet{
                 this.addRows(10);
             }
         };
-        this.tableWrapper.addEventListener("scroll", dynamicAddCellsHandler);
-
-        let removeLastFocus = () => {
-                this.focusedCell
-                    .classList
-                    .remove("focused-cell", "focused-input-cell");
-            }
-
-        let focusinCell = (event) => {
+        let focusinCellHdlr = (event) => {
             if(event.target === input) {
                 removeLastFocus();
                 this.focusedCell = input.parentElement;
@@ -604,10 +667,7 @@ class Sheet{
                 translateToConsole(event);
             }
         };
-        this.tableWrapper.addEventListener("focusin", focusinCell);
-
-
-        let headersHighlight = (event) => {
+        let headersHighlightHdlr = (event) => {
             if(this.formulaMode === true) return;
 
             let removeHiglighted = () => {
@@ -636,11 +696,8 @@ class Sheet{
                 this.highlightedHeaders
                     .columns.push(this.colHeaderList.children[colIndex]);
             }
-        }
-        this.tableWrapper.addEventListener("focusin", headersHighlight);
-
-
-        let invokeInputHandler = (event) => {
+        };
+        let invokeInputHdlr = (event) => {
             if (this.formulaMode === true ||
                 event.target === input ||
                 event.keyCode === Utils.keyCode.backspace ||
@@ -648,6 +705,7 @@ class Sheet{
                 return;
             }
 
+            a(this);
             let {cellName} = Utils.getCellCoordinates(this.focusedCell);
 
             if (event.keyCode &&
@@ -661,71 +719,39 @@ class Sheet{
             }
             this.focusedCell.innerHTML = "";
             this.focusedCell.appendChild(input);
+a(`input invoked: ${this.name}`)
+
             if(event.target.tagName === "TD") {
                 input.focus();
             }
         };
-        this.tableWrapper.addEventListener("dblclick", invokeInputHandler);
-        this.tableWrapper.addEventListener("keypress", invokeInputHandler);
-
-
-        let consoleFocusHandler = (event) => {
+        let consoleFocusHdlr = (event) => {
+a(`Console focused: ${this.name}`)
             if(event.relatedTarget === input) return;
-            invokeInputHandler(event);
+            invokeInputHdlr(event);
             removeLastFocus();
             this.focusedCell = input.parentElement;
             this.focusedCell.classList.add("focused-input-cell");
-        }
-        this.inputConsole.addEventListener("focus", consoleFocusHandler);
-
-        let consoleInputChangeHandler = (event) => {
+        };
+        let consoleInputChangeHdlr = (event) => {
+a(`Console input changed: ${this.name}`)
             input.value = this.inputConsole.value;
             formulaModeToggle();
-        }
-        this.inputConsole.addEventListener("input", consoleInputChangeHandler);
-
-        let inputDone = () => {
-            if (this.formulaMode === true) return;
-
-            let {rowIndex, colIndex, cellName} = Utils
-                .getCellCoordinates(input.parentNode);
-
-            if(input.value === "") {
-                input.parentNode.innerHTML = "";
-                delete this.cellsList[cellName];
-                return;
-            } 
-            if (!this.cellsList[cellName] && input.value !== "") {
-                this.cellsList[cellName] = 
-                    new Cell(rowIndex, colIndex, this.tbody);
-            }
-            this.cellsList[cellName].value = input.value;
-
-            input.parentElement.innerHTML = input.value;
-            synchronize();
-
-            input.value = "";
-            this.inputConsole.value = input.value;
         };
+        let inputKeyDoneHdlr = (event) => {
+            if (event.keyCode === Utils.keyCode.enter) {
+                let {rowIndex, colIndex} =
+                    Utils.getCellCoordinates(input.parentElement);
 
-
-        let inputKeyDoneHandler = (event) => {
-                if (event.keyCode === Utils.keyCode.enter) {
-                    let {rowIndex, colIndex} =
-                        Utils.getCellCoordinates(input.parentElement);
-
-                    formulaModeToggle(true);
-                    let nextFocusCell =
-                        Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody);
-                    setTimeout(function() {
-                        nextFocusCell.focus();
-                    }, 0);
-                }
-            };
-        input.addEventListener("keydown", inputKeyDoneHandler);
-        this.inputConsole.addEventListener("keydown", inputKeyDoneHandler);
-
-        let formulaPickCellHandler = (event) => {
+                formulaModeToggle(true);
+                let nextFocusCell =
+                    Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody);
+                setTimeout(function() {
+                    nextFocusCell.focus();
+                }, 0);
+            }
+        };
+        let formulaPickCellHdlr = (event) => {
             if (event.target === input) {
                 return
             }
@@ -750,69 +776,18 @@ class Sheet{
                 this.inputConsole.value = input.value;
             }
         };
-
-        let translateToConsole = (event) => {
-            if (!this.formulaMode && event.target.tagName === "TD") {
-                let {cellName} = Utils.getCellCoordinates(event);
-
-                if (this.cellsList[cellName] instanceof Cell) {
-                    this.inputConsole.value = this.cellsList[cellName].value;
-                } else {
-                    this.inputConsole.value = event.target.innerHTML;
-                }
-            }
-        }
-
-        let forcedFormulaModeFocusHandler = (event) => {
+        let forcedFormulaModeFocusHdlr = (event) => {
             if (event.relatedTarget === input ||
                     event.relatedTarget === this.inputConsole) return;
 
             input.parentElement.focus();
             event.target.focus();
         };
-
-        let formulaModeToggle = (inputDone = false) => {
-            if (inputDone) {
-                this.formulaMode = false;
-            } else {
-                this.formulaMode = (input.value[0] === "=") ? true : false;
-            }
-
-            if (this.formulaMode) {
-                input.addEventListener("blur", forcedFormulaModeFocusHandler);
-                this.inputConsole.addEventListener("blur", forcedFormulaModeFocusHandler);
-                this.tableWrapper
-                    .addEventListener("click", formulaPickCellHandler); 
-            } else {
-                input.removeEventListener("blur", forcedFormulaModeFocusHandler);
-                this.inputConsole.removeEventListener("blur", forcedFormulaModeFocusHandler);
-                this.tableWrapper
-                    .removeEventListener("click", formulaPickCellHandler); 
-
-                let pickedCellsNodes = this
-                                .tableWrapper
-                                .querySelectorAll(".formula-mode-picked-cell");
-
-                for (let i = 0; i < pickedCellsNodes.length; i++) {
-                    pickedCellsNodes[i].classList.remove("formula-mode-picked-cell");
-                }
-            }
-        }
-
-        let inputValueChangeHandler = (event) => {
+        let inputValueChangeHdlr = (event) => {
             formulaModeToggle();
             this.inputConsole.value = input.value;
         };
-        input.addEventListener("input", inputValueChangeHandler);
-
-        let synchronize = () => {
-            for (let cell in this.cellsList) {
-                let cellOnSheet = this.cellsList[cell].cellNode;
-                cellOnSheet.innerHTML = this.cellsList[cell].computedValue;
-            }
-        };
-
-        let clearCellDataHandler = (event) => {
+        let clearCellDataHdlr = (event) => {
             if (event.target.tagName !== "TD") {
                 return;
             }
@@ -829,9 +804,7 @@ class Sheet{
                 synchronize();
             }
         };
-        this.tableWrapper.addEventListener("keydown", clearCellDataHandler);
-
-        let changeFocusHandler = (event) => {
+        let changeFocusHdlr = (event) => {
             if (event.target === input &&
                 Utils.keyCode.arrows.includes(event.keyCode)) {
                 return;
@@ -861,8 +834,50 @@ class Sheet{
                         break;
                 }
             }
+        };
+
+        if (typeof active === "boolean" && active) {
+            this.tableWrapper.addEventListener("scroll", pullHeadersHdlr);
+            this.tableWrapper.addEventListener("scroll", dynamicAddCellsHdlr);
+            this.tableWrapper.addEventListener("focusin", focusinCellHdlr);
+            this.tableWrapper.addEventListener("focusin", headersHighlightHdlr);
+            this.tableWrapper.addEventListener("dblclick", invokeInputHdlr);
+            this.tableWrapper.addEventListener("keypress", invokeInputHdlr);
+            this.tableWrapper.addEventListener("keydown", clearCellDataHdlr);
+            this.tableWrapper.addEventListener("keydown", changeFocusHdlr);
+
+            this.inputConsole.addEventListener("focus", consoleFocusHdlr);
+            this.inputConsole.addEventListener("input", consoleInputChangeHdlr);
+            this.inputConsole.addEventListener("keydown", inputKeyDoneHdlr);
+
+            input.addEventListener("keydown", inputKeyDoneHdlr);
+            input.addEventListener("input", inputValueChangeHdlr);
+a(`Listeners run: ${this.name}`)
         }
-        this.tableWrapper.addEventListener("keydown", changeFocusHandler);
+
+        if (typeof active === "boolean" && !active) {
+            this.tableWrapper.removeEventListener("scroll", pullHeadersHdlr);
+            this.tableWrapper.removeEventListener("scroll", dynamicAddCellsHdlr);
+            this.tableWrapper.removeEventListener("focusin", focusinCellHdlr);
+            this.tableWrapper.removeEventListener("focusin", headersHighlightHdlr);
+            this.tableWrapper.removeEventListener("dblclick", invokeInputHdlr);
+            this.tableWrapper.removeEventListener("keypress", invokeInputHdlr);
+            this.inputConsole.removeEventListener("focus", consoleFocusHdlr);
+            this.inputConsole.removeEventListener("input", consoleInputChangeHdlr);
+            input.removeEventListener("keydown", inputKeyDoneHdlr);
+            this.inputConsole.removeEventListener("keydown", inputKeyDoneHdlr);
+            input.removeEventListener("input", inputValueChangeHdlr);
+            this.tableWrapper.removeEventListener("keydown", clearCellDataHdlr);
+            this.tableWrapper.removeEventListener("keydown", changeFocusHdlr);
+a(`Listeners stopped: ${this.name}`);
+        }
+    }
+
+    initListeners() {
+        this.listenersControl(true);
+    }
+    stopListeners() {
+        this.listenersControl(false);
     }
 }
 
