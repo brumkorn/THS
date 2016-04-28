@@ -228,27 +228,28 @@ class Utils {
 
 class SheetEditor {
 
-    constructor(params = {}) {
+    constructor(params) {
+        this.target = document.querySelector(".main");
+        this.columns = Math.abs(26);
+        this.rows = Math.abs(50);
 
-        let {
-            target = ".main", 
-            columns = 26,
-            rows = 35,
-            maxColls = 60,
-            maxRows = 35, 
-            readOnly = false
-        } = params;
-        this.target = document.querySelector(target);
-        this.maxColls = maxColls;
-        this.maxRows = maxRows;
-        this.readOnly = readOnly;
-        this.columns = Math.abs(columns);
-        this.rows = Math.abs(rows);
-        this._currentSheet = {};
+        if (params && typeof params === "object") {
+            this.target = params.target
+            this.maxColls = params.maxColls;
+            this.maxRows = params.maxRows;
+            this.readOnly = params.readOnly;
+            this.columns = Math.abs(params.columns);
+            this.rows = Math.abs(params.rows);
+        }
+
+        this._currentSheet = null;
         this.sheetList = [];
         this.footerToolbar = document.querySelector(".footer-toolbar");
+        this.serverData = null;
+
         this.start();
         this.initListeners();
+
 
     }
 
@@ -257,13 +258,43 @@ class SheetEditor {
     }
 
     start() {
+
+
         if (localStorage[`${this.name}`]) {
             this.loadSheets();
             return;
         }
 
-        localStorage.setItem(this.name, "");
-        this.addNewSheet();
+        this.getServerData("jsonget.php", (data) => {
+            this.serverData = data;
+        });
+
+        setTimeout(() => {
+            if (this.serverData) {
+                alert("Loading from server");
+                this.loadSheets();
+                this.saveData();
+                return;
+            }
+
+            localStorage.setItem(this.name, "");
+            this.addNewSheet();
+        }, 0)
+
+    }
+
+    loadSheets() {
+        let loadedData = this.loadData() || this.serverData;
+        loadedData.forEach(function(item) {
+            this.initTable();
+            this.createSheet(item._currentColumns, item._currentRows, true);
+        }, this);
+        this.switchSheet(0);
+    }
+
+    loadData() {
+        let objectData = JSON.parse(localStorage.getItem(this.name));
+        return objectData;
     }
 
     initTable() {
@@ -307,7 +338,9 @@ class SheetEditor {
             sheetCellsData = {};
 
         if(loading) {
-            sheetCellsData = this.loadData()[sheetID].cellsList;
+            sheetCellsData = this.loadData() ? 
+                this.loadData()[sheetID].cellsList : 
+                this.serverData[sheetID].cellsList;
         }
 
         let sheet = new Sheet(columns, rows, sheetID, sheetCellsData);
@@ -334,31 +367,57 @@ class SheetEditor {
     saveData() {
         let objectData = JSON.stringify(this.sheetList);
         localStorage.setItem(this.name, objectData);
-    }
 
-    loadData() {
-        let objectData = JSON.parse(localStorage.getItem(this.name));
-        return objectData;
-    }
-
-    loadSheets() {
-        let self = this;
-        let loadedData = this.loadData();
-        loadedData.forEach(function(item) {
-            self.initTable();
-            self.createSheet(item._currentColumns, item._currentRows, true);
+        this.postServerData('jsonpost.php', objectData, function(data) {
+                alert(data);
         });
-        self.switchSheet(0);
     }
+
+    getServerData(path, callback) {
+        let httpRequest = new XMLHttpRequest();
+        httpRequest.open("POST", path);
+        httpRequest.send();
+        let self = this;
+
+        httpRequest.onreadystatechange = function () {
+            if (httpRequest.readyState === 4) {
+                if (httpRequest.status === 200) {
+                    let JSONData = JSON.parse(httpRequest.responseText);
+                    if (callback) {
+                        callback(JSONData);
+                    }
+                }
+            }
+        };
+    }
+
+    postServerData(path, object, callback) {
+        let transition = object;
+        let params = "nameKey=" + transition;
+        let httpRequest = new XMLHttpRequest();
+
+        httpRequest.onreadystatechange = function() {
+            if (httpRequest.readyState === 4) {
+                if (httpRequest.status === 200) {
+                    let data = httpRequest.responseText;
+                    if (callback) callback(data);
+                }
+            }
+        };
+
+        httpRequest.open('POST', path);
+        httpRequest.setRequestHeader("Content-type",
+                                     "application/x-www-form-urlencoded");
+        httpRequest.send(params); 
+    }
+
+
 
     addNewSheet(columns, rows) {
         this.initTable();
         this.createSheet(columns, rows);
     }
 
-    //switching is work not optimal. exessive loops and broking after hard clicking
-    //1st variant -toggle all off. togle on new (by query selectors);
-    //2nd variant - toggle current off. make new and toggle on it
     switchSheet(sheetIndex) {
         let sheetBookmarksList =
             this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
