@@ -39,5 +39,5 @@ Thumbs.db
 # Locals #
 ##########
 
-serverDB.txt
-obsoleteCode.js
+serverDB.json
+.idea/

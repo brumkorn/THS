@@ -83,9 +83,11 @@ class Utils {
     }
 
     static getNumberFromName(letter) {
-        let numeric = 0;
+        let numeric = 0,
+            upperLatinAUnicode = 65;
+
         for (let i = 0; i < letter.length; i++) {
-            numeric += letter.charCodeAt(i) - 65;
+            numeric += letter.charCodeAt(i) - upperLatinAUnicode;
         }
         return numeric;
     }
@@ -265,7 +267,7 @@ class SheetEditor {
             return;
         }
 
-        this.getServerData("jsonget.php", (data) => {
+        this.getServerData("http://127.0.0.1:3000/load", (data) => {
             this.serverData = data;
         });
 
@@ -368,8 +370,8 @@ class SheetEditor {
         let objectData = JSON.stringify(this.sheetList);
         localStorage.setItem(this.name, objectData);
 
-        this.postServerData('jsonpost.php', objectData, function(data) {
-                alert(data);
+        this.postServerData('http://127.0.0.1:3000/save', objectData, function(data) {
+            alert(data);
         });
     }
 
@@ -377,7 +379,6 @@ class SheetEditor {
         let httpRequest = new XMLHttpRequest();
         httpRequest.open("POST", path);
         httpRequest.send();
-        let self = this;
 
         httpRequest.onreadystatechange = function () {
             if (httpRequest.readyState === 4) {
@@ -392,8 +393,7 @@ class SheetEditor {
     }
 
     postServerData(path, object, callback) {
-        let transition = object;
-        let params = "nameKey=" + transition;
+        let json = object;
         let httpRequest = new XMLHttpRequest();
 
         httpRequest.onreadystatechange = function() {
@@ -405,10 +405,10 @@ class SheetEditor {
             }
         };
 
-        httpRequest.open('POST', path);
+        httpRequest.open("POST", path);
         httpRequest.setRequestHeader("Content-type",
-                                     "application/x-www-form-urlencoded");
-        httpRequest.send(params); 
+                                     "text/plain; charset=utf-8");
+        httpRequest.send(json); 
     }
 
 
