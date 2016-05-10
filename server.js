@@ -13,7 +13,7 @@ function RequestHandler(req, res) {
   res.setHeader("Content-Type", "application/json; charset=UTF-8");
 
   if (req.url == '/load') {
-    fs.readFile('serverDB.json', ReadCallback)
+    fs.readFile('serverDB.json', ReadCallback);
 
     function ReadCallback(err, content) {
 

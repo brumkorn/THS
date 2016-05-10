@@ -1,0 +1,23 @@
+{
+  "name": "ths",
+  "version": "1.0.0",
+  "description": "[![Codacy Badge](https://api.codacy.com/project/badge/grade/a4b21679fd2f4554951492ab55e465a8)](https://www.codacy.com/app/brumkorn/THS)",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brumkorn/THS.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/brumkorn/THS/issues"
+  },
+  "homepage": "https://github.com/brumkorn/THS#readme",
+  "devDependencies": {
+    "babel-cli": "^6.8.0"
+  }
+}

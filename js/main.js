@@ -29,7 +29,6 @@
 
 // }
 
-
 (function () {
   "use strict";
   let a = console.log.bind(console);
@@ -141,8 +140,7 @@
       }
 
       if (typeof data === "string") {
-        let cellName = data;
-        let cellNameArr = cellName.match(Utils.regExp.cellLinkParts);
+        let cellNameArr = data.match(Utils.regExp.cellLinkParts);
         let rowIndex = cellNameArr[1] - 1;
         let colIndex = Utils.getNumberFromName(cellNameArr[0]);
         return {
@@ -154,7 +152,6 @@
 
     static parseExpression(inputExp, tbody) {
       let inputArrPattern = Utils.regExp.validInput,
-        operators = Utils.regExp.operators,
         cellLinkPattern = Utils.regExp.cellLink,
         inputArr = inputExp.match(inputArrPattern) || [],
         links = inputExp.match(cellLinkPattern) || [];
@@ -232,7 +229,7 @@
       this.rows = Math.abs(50);
 
       if (params && typeof params === "object") {
-        this.target = params.target
+        this.target = params.target;
         this.maxColls = params.maxColls;
         this.maxRows = params.maxRows;
         this.readOnly = params.readOnly;
@@ -291,8 +288,7 @@
     }
 
     loadData() {
-      let objectData = JSON.parse(localStorage.getItem(this.name));
-      return objectData;
+      return JSON.parse(localStorage.getItem(this.name));
     }
 
     initTable() {
@@ -331,18 +327,19 @@
     }
 
     createSheet(columns = this.columns, rows = this.rows, loading = false) {
-      let toolbar = this.footerToolbar,
-        sheetID = this.sheetList.length,
+      let editor = this;
+      let toolbar = editor.footerToolbar,
+        sheetID = editor.sheetList.length,
         sheetCellsData = {};
 
       if (loading) {
-        sheetCellsData = this.loadData() ?
-          this.loadData()[sheetID].cellsList :
-          this.serverData[sheetID].cellsList;
+        sheetCellsData = editor.loadData() ?
+          editor.loadData()[sheetID].cellsList :
+          editor.serverData[sheetID].cellsList;
       }
 
       let sheet = new Sheet(columns, rows, sheetID, sheetCellsData);
-      this._currentSheet = sheet;
+      editor._currentSheet = sheet;
 
       let option = toolbar.querySelector("select > option:last-child");
       option.setAttribute("value", sheet.ID);
@@ -353,22 +350,46 @@
       sheetBookmarksList[sheet.ID].id = `${sheet.ID}-sheet-bookmark`;
       sheetBookmarksList[sheet.ID].textContent = option.textContent;
 
-      this.sheetList.push(sheet);
-      this.switchSheet(sheet.ID);
+      editor.sheetList.push(sheet);
+      editor.switchSheet(sheet.ID);
 
       if (!loading) {
-        this.saveData();
-        return;
+        editor.saveData();
       }
     }
 
     saveData() {
-      let objectData = JSON.stringify(this.sheetList);
-      localStorage.setItem(this.name, objectData);
+      let editor = this;
+      let sheetsData = [];
+      let objectData;
+      editor.sheetList.forEach(ForEachCB, editor);
+      objectData = JSON.stringify(sheetsData);
 
+      localStorage.setItem(this.name, objectData);
       this.postServerData('http://127.0.0.1:3000/save', objectData, function (data) {
         alert(data);
       });
+
+      function ForEachCB(sheet) {
+        let cellsData = {};
+
+        for (let cell in sheet.cellsList) {
+          cellsData[cell] = {
+            value: sheet.cellsList[cell].value,
+            computedValue: sheet.cellsList[cell].computedValue,
+            colIndex: sheet.cellsList[cell].colIndex,
+            rowIndex: sheet.cellsList[cell].rowIndex
+          };
+        }
+
+        let sheetData = {
+          cellsList: cellsData,
+          currentRows: sheet._currentRows,
+          currentColumns: sheet._currentColumns
+        };
+
+        sheetsData.push(sheetData);
+      }
     }
 
     getServerData(path, callback) {
@@ -456,7 +477,7 @@
           this.footerToolbar.querySelector(".sheet-bookmarks"),
         saveButton = document.getElementsByClassName("menu-button")[1],
         resetButton = document.getElementsByClassName("menu-button")[2],
-        deleteSheetButton = document.getElementsByClassName("menu-button")[3]
+        deleteSheetButton = document.getElementsByClassName("menu-button")[3];
 
       let switchSheetHdlr = (event) => {
         if (event.target.parentElement.className === "sheet-bookmarks" ||
@@ -479,7 +500,7 @@ Are you shure you want to delete ${this._currentSheet.name}?
         let delSheetID = this._currentSheet.ID;
         this.switchSheet(this._currentSheet.ID - 1);
         this.deleteSheet(delSheetID);
-      }
+      };
       newSheetButton.addEventListener("click", () => this.addNewSheet());
       select.addEventListener("change", switchSheetHdlr);
       sheetBookmarks.addEventListener("click", switchSheetHdlr);
@@ -503,6 +524,7 @@ Are you shure you want to delete ${this._currentSheet.name}?
       this._currentColumns = 0;
       this.cellsList = cellsList;
       this.formulaMode = false;
+      //this.editor = editor;
 
       this.sheetContainer = document.querySelector(".main>div:last-child");
       this.sheetContainer.id = `sheet-container-${this.ID}`;
@@ -569,17 +591,20 @@ Are you shure you want to delete ${this._currentSheet.name}?
     }
 
     loadCellsData() {
-      for (let item in this.cellsList) {
-        let currentCell = this.cellsList[item];
-        this.cellsList[item] = new Cell(
+      let sheet = this;
+      for (let cell in sheet.cellsList) {
+        let currentCell = sheet.cellsList[cell];
+        a(currentCell.rowIndex);
+        a(currentCell.value);
+        sheet.cellsList[cell] = new Cell(
           currentCell.rowIndex,
           currentCell.colIndex,
-          this.tbody,
-          currentCell._value,
-          currentCell._computedValue
+          sheet.tbody,
+          currentCell.value,
+          currentCell.computedValue
         );
-        currentCell = this.cellsList[item];
-        let targetRow = this.tbody.children[currentCell.rowIndex];
+        currentCell = sheet.cellsList[cell];
+        let targetRow = sheet.tbody.children[currentCell.rowIndex];
         let targetCell = targetRow.children[currentCell.colIndex];
         targetCell.innerHTML = currentCell._computedValue;
       }
@@ -649,7 +674,7 @@ Are you shure you want to delete ${this._currentSheet.name}?
         if (inputDone) {
           this.formulaMode = false;
         } else {
-          this.formulaMode = (input.value[0] === "=") ? true : false;
+          this.formulaMode = (input.value[0] === "=");
         }
 
         if (this.formulaMode) {
@@ -717,7 +742,7 @@ Are you shure you want to delete ${this._currentSheet.name}?
           }
           removeLastFocus();
           this.focusedCell = event.target;
-          event.target.classList.add("focused-cell")
+          event.target.classList.add("focused-cell");
           translateToConsole(event);
         }
       };
@@ -734,7 +759,7 @@ Are you shure you want to delete ${this._currentSheet.name}?
             item.classList.remove("cell-header-highlight")
           }
           this.highlightedHeaders.rows.length = 0;
-        }
+        };
 
         if (event.target.tagName === "TD") {
           removeHiglighted();
@@ -773,22 +798,22 @@ Are you shure you want to delete ${this._currentSheet.name}?
         }
         this.focusedCell.innerHTML = "";
         this.focusedCell.appendChild(input);
-        a(`input invoked: ${this.name}`)
+        a(`input invoked: ${this.name}`);
 
         if (event.target.tagName === "TD") {
           input.focus();
         }
       };
       let consoleFocusHdlr = (event) => {
-        a(`Console focused: ${this.name}`)
+        a(`Console focused: ${this.name}`);
         if (event.relatedTarget === input) return;
         invokeInputHdlr(event);
         removeLastFocus();
         this.focusedCell = input.parentElement;
         this.focusedCell.classList.add("focused-input-cell");
       };
-      let consoleInputChangeHdlr = (event) => {
-        a(`Console input changed: ${this.name}`)
+      let consoleInputChangeHdlr = () => {
+        a(`Console input changed: ${this.name}`);
         input.value = this.inputConsole.value;
         formulaModeToggle();
       };
@@ -837,7 +862,7 @@ Are you shure you want to delete ${this._currentSheet.name}?
         input.parentElement.focus();
         event.target.focus();
       };
-      let inputValueChangeHdlr = (event) => {
+      let inputValueChangeHdlr = () => {
         formulaModeToggle();
         this.inputConsole.value = input.value;
       };
@@ -942,8 +967,8 @@ Are you shure you want to delete ${this._currentSheet.name}?
       this.colIndex = colIndex;
       this.rowIndex = rowIndex;
       this.value = value;
-      this.tbody = tbody
-      this.computedValue = computedValue
+      this.tbody = tbody;
+      this.computedValue = computedValue;
     }
 
     get cellNode() {
@@ -975,5 +1000,5 @@ Are you shure you want to delete ${this._currentSheet.name}?
       return this._computedValue;
     }
   }
-  let editor = new SheetEditor();
+  new SheetEditor();
 })();
