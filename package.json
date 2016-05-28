@@ -5,19 +5,21 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "http-server -c-1 -o"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brumkorn/THS.git"
   },
-  "author": "",
+  "author": "brumkorn",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/brumkorn/THS/issues"
   },
   "homepage": "https://github.com/brumkorn/THS#readme",
   "devDependencies": {
-    "babel-cli": "^6.8.0"
+    "babel-cli": "^6.8.0",
+    "eslint": "^1.5.1",
+    "http-server": "^0.9.0"
   }
 }
