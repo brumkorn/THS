@@ -2,9 +2,17 @@
   "name": "ths",
   "version": "1.0.0",
   "description": "[![Codacy Badge](https://api.codacy.com/project/badge/grade/a4b21679fd2f4554951492ab55e465a8)](https://www.codacy.com/app/brumkorn/THS)",
-  "main": "server.js",
+  "main": "app.js",
+  "babel": {
+    "presets": [
+      "es2015"
+    ]
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "babel app -d lib",
+    "bundle": "jspm bundle app.js app/app.bundle.js --inject --minify",
+    "unbundle": "jspm unbundle",
+    "depcache": "jspm depcache app.js",
     "start": "http-server -c-1 -o"
   },
   "repository": {
@@ -18,8 +26,27 @@
   },
   "homepage": "https://github.com/brumkorn/THS#readme",
   "devDependencies": {
-    "babel-cli": "^6.8.0",
+    "babel-cli": "^6.9.0",
+    "babel-preset-es2015": "^6.9.0",
     "eslint": "^1.5.1",
-    "http-server": "^0.9.0"
+    "http-server": "^0.9.0",
+    "jspm": "^0.16.35"
+  },
+  "jspm": {
+    "directories": {
+      "baseURL": "app"
+    },
+    "dependencies": {
+      "bootstrap": "github:twbs/bootstrap@^3.3.6",
+      "css": "github:systemjs/plugin-css@^0.1.22",
+      "firebase": "github:firebase/firebase-bower@^3.0.3",
+      "text": "github:systemjs/plugin-text@^0.0.8",
+      "underscore": "npm:underscore@^1.8.3"
+    },
+    "devDependencies": {
+      "babel": "npm:babel-core@^5.8.24",
+      "babel-runtime": "npm:babel-runtime@^5.8.24",
+      "core-js": "npm:core-js@^1.1.4"
+    }
   }
 }

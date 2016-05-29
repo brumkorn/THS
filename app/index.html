@@ -5,60 +5,16 @@
   <title>The Handsome Spreadsheets</title>
 
   <link rel="stylesheet" type="text/css" href="css/style.css">
-  <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css">
-  <script src="lib/traceur/traceur.min.js"></script>
-  <script src="lib/system.js/dist/system.js"></script>
+  <link rel="stylesheet" href="jspm_packages/github/twbs/bootstrap@3.3.6/css/bootstrap.min.css">
+  <script src="jspm_packages/system.js"></script>
+  <script src="config.js"></script>
   <script src="services/System.yuml.js"></script>
+
 
 </head>
 <body>
-<main class="wrapper">
 
-  <div class="tools-wraper">
-    <div class="main-menu-button-align">
-      <div class="main-menu-button">
-        <img src="images/menu_stack.png">
-      </div>
-    </div>
-    <div class="menu-bar-align">
-      <div class="menu-bar">
-        <div class="menu-button">File</div>
-        <div class="menu-button">Save</div>
-        <div class="menu-button">Reset</div>
-        <div class="menu-button">Delete</div>
-      </div>
-    </div>
-    <div class="tool-bar-align">
-      <div class="tool-bar"></div>
-    </div>
-    <div class="formulas">
-      <span>fx</span>
-
-      <label><input class="input-console"></label>
-    </div>
-  </div>
-
-  <div class="main">
-  </div>
-
-  <div class="footer-toolbar-align">
-    <div class="footer-toolbar">
-      <div class="button-wrapper">
-        <div class="new-sheet-button">
-          <img src="images/plus_icon.png">
-        </div>
-      </div>
-      <div>
-        <select title="pages"></select>
-      </div>
-      <div class="sheet-bookmarks"></div>
-    </div>
-  </div>
-
-</main>
-
-
-<script src="lib/firebase/firebase.js"></script>
+<main class="wrapper" id="ths-target"></main>
 
 <script>
   System.import('app.js')

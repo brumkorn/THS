@@ -8,7 +8,10 @@ window.showModuleRelationships = function () {
 
   function displayName(module) {
     return module
-      .replace(System.baseURL, "");
+      //.replace(System.baseURL, "")
+      //.replace("npm:", "jspm_packages/npm/")
+      //.replace("github:", "jspm_packages/github/")
+      .replace(/^(.*[\\\/])/,"");
   }
 
   var moduleDefinitions = modules.map(function (module) {

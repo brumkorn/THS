@@ -38,6 +38,6 @@ Thumbs.db
 
 # Locals #
 ##########
-
-serverDB.json
 .idea/
+node_modules/
+lib_jspm/
