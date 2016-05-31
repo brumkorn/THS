@@ -1,6 +1,8 @@
 /**
  * Created by Brumkorn on 27.05.2016.
  */
+let a = console.log.bind(console);
+
 export default class Utils {
   static get keyCode() {
     return {
@@ -32,10 +34,29 @@ export default class Utils {
     }
   }
 
+  static get pickedCellColors() {
+    return [
+      "#edaf00",
+      "#ed2bb4",
+      "#1dd4ed",
+      "#8e411c",
+      "#41ed1e",
+      "#385ded",
+      "#eda1dc",
+      "#958ded",
+      "#ed1a7f",
+      "#a9ed2d",
+      "#318ced",
+      "#db6fed",
+      "#ed6811"
+    ]
+  }
+
   static getNameFromNumber(num) {
     if (typeof num !== "number") {
       console.error("Wrong type in getNameFromNumber", typeof num);
       debugger;
+      return;
     }
     let upperLatinLetters = 26,
       upperLatinAUnicode = 65,
@@ -73,6 +94,8 @@ export default class Utils {
   static getCellCoordinates(data) {
 
     let cellInfo = {};
+
+
 
     if (data instanceof HTMLElement && data.nodeName === "TD") {
       let cellNode = data;
@@ -115,45 +138,69 @@ export default class Utils {
       cellInfo.cellName = data;
     }
 
+    cellInfo.cellName = cellInfo.cellName.toUpperCase();
     cellInfo.findNode = function (tbody) {
       return Utils.findCellOnSheet(cellInfo.rowIndex, cellInfo.colIndex, tbody);
-    }
+    };
 
     return cellInfo;
   }
 
   static parseExpression(inputExp, tbody) {
-    let inputArrPattern = Utils.regExp.validInput,
-      cellLinkPattern = Utils.regExp.cellLink,
-      inputArr = inputExp.match(inputArrPattern) || [],
-      links = inputExp.match(cellLinkPattern) || [];
+    let inputArrPattern,
+      cellLinkPattern,
+      inputArr,
+      returnArr,
+      linksNodes,
+      linksNames;
 
-    let returnArr = inputArr.map(function (current) {
+    inputArrPattern = Utils.regExp.validInput;
+    cellLinkPattern = Utils.regExp.cellLink;
+    inputArr = inputExp.match(inputArrPattern) || [];
+    linksNodes = [];
+    linksNames = [];
+
+    returnArr = inputArr.map(function (current) {
       let matched = current.match(cellLinkPattern);
+
       if (matched) {
         let cellName = matched[0].toUpperCase();
+        linksNames.push(cellName);
         let {rowIndex, colIndex} =
           Utils.getCellCoordinates(cellName);
-        return Utils.findCellOnSheet(rowIndex, colIndex, tbody);
+
+
+        let linkNode = Utils.findCellOnSheet(rowIndex, colIndex, tbody);
+        linksNodes.push(linkNode);
+
+        return linkNode;
       }
+
       return current
     });
 
     return {
       parsedInput: returnArr,
-      parsedLinks: links
+      linksCellNodes: linksNodes,
+      linksCellNames: linksNames
     };
   }
 
+  //TODO get rid of input text like variables
   static computeValue(inputExp, tbody) {
-    let expressionArr = Utils.parseExpression(inputExp, tbody).parsedInput;
-    let expressionStr = "",
-      operators = Utils.regExp.operators,
-      doublePlusesAndMinuses = Utils.regExp.doublePlusesAndMinuses,
-      plusMinus = Utils.regExp.plusMinus;
+    let {parsedInput} = Utils.parseExpression(inputExp, tbody);
+    let expressionStr,
+      operators,
+      doublePlusesAndMinuses,
+      plusMinus;
 
-    for (let i = 0; i < expressionArr.length; i++) {
-      let item = expressionArr[i];
+    expressionStr = "";
+    operators = Utils.regExp.operators;
+    doublePlusesAndMinuses = Utils.regExp.doublePlusesAndMinuses;
+    plusMinus = Utils.regExp.plusMinus;
+
+    for (let i = 0; i < parsedInput.length; i++) {
+      let item = parsedInput[i];
 
       if (typeof item === "object" || item.search(operators) === -1) {
         continue;
@@ -167,10 +214,11 @@ export default class Utils {
           item = item.replace(plusMinus, "-")
         }
       }
-      expressionArr[i] = item;
+      parsedInput[i] = item;
     }
 
-    for (let item of expressionArr) {
+    for (let item of parsedInput) {
+
       if (typeof item === "object") {
         expressionStr += item.innerHTML || 0;
       } else {

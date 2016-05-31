@@ -3,6 +3,7 @@
  */
 import Utils from "./utils.class.js";
 import Cell from "./cell.class.js";
+import InputCell from "./input-cell.class.js";
 
 let a = console.log.bind(console);
 
@@ -48,47 +49,6 @@ export default class Sheet {
 
   removeListeners() {
     this.listenersControl(false);
-  }
-
-  addRows(rows = 1) {
-    let cls = this
-    for (let i = 0; i < rows; i++) {
-      let row = cls.tbody.insertRow(-1);
-      insertRowHeader();
-      cls._currentRows++;
-
-      for (let j = 0; j < cls._currentColumns; j++) {
-        let cell = row.insertCell(-1);
-        cell.classList.add("data-cell");
-        cell.tabIndex = cls._currentRows + "";
-      }
-    }
-
-    function insertRowHeader() {
-      cls.rowHeaderList.appendChild(document.createElement("li"));
-    }
-  }
-
-  addColumns(columns = 1) {
-    let cls = this;
-    let rowList = cls.tbody.querySelectorAll("tr");
-    cls._currentColumns += columns;
-
-    for (let i = 0; i < cls._currentRows; i++) {
-      for (let j = 0; j < columns; j++) {
-        if (i === 0) {
-          insertColHeader();
-        }
-
-        let cell = rowList[i].insertCell(-1);
-        cell.classList.add("data-cell");
-        cell.tabIndex = i + 1 + "";
-      }
-    }
-
-    function insertColHeader() {
-      cls.colHeaderList.appendChild(document.createElement("li"));
-    }
   }
 
   listenersControl(active = true) {
@@ -143,8 +103,8 @@ export default class Sheet {
       let {rowIndex, colIndex, cellName} = Utils
         .getCellCoordinates(input.parentNode);
 
-      if (input.value === "") {
-        input.parentNode.innerHTML = "";
+      if (input.value === '') {
+        input.parentNode.innerHTML = '';
         delete cls.cellsList[cellName];
         return;
       }
@@ -152,6 +112,8 @@ export default class Sheet {
         cls.cellsList[cellName] =
           new Cell(rowIndex, colIndex, cls.tbody);
       }
+
+
       cls.cellsList[cellName].value = input.value;
 
       input.parentElement.innerHTML = input.value;
@@ -159,18 +121,9 @@ export default class Sheet {
 
       input.value = "";
       cls.formulaBar.inputConsole.value = input.value;
-      hidePickedCells()
-
-      function hidePickedCells() {
-        let pickedCellsNodes = cls
-          .tableWrapper
-          .querySelectorAll(".formula-mode-picked-cell");
-
-        for (let i = 0; i < pickedCellsNodes.length; i++) {
-          pickedCellsNodes[i].classList.remove("formula-mode-picked-cell");
-        }
-      }
+      _hidePickedCells.call(cls)
     }
+
 
     function synchronize() {
       for (let cell in cls.cellsList) {
@@ -256,24 +209,28 @@ export default class Sheet {
       }
     }
 
-    function inputValueChangeHdlr() {
+    function inputValueChangeHdlr(event) {
       cls.formulaModeToggle();
       cls.formulaBar.inputConsole.value = input.value;
+      _pickedCellsSync.call(cls);
+
     }
 
     function clearCellDataHdlr(event) {
-      if (event.target.tagName !== "TD") {
-        return;
-      }
+      if (event.target.tagName !== "TD") return;
+
       if (event.keyCode === Utils.keyCode.alt ||
         event.keyCode === Utils.keyCode.backspace) {
         event.preventDefault();
       }
+
       if (event.target.innerHTML === "") return;
+
       if (event.keyCode === Utils.keyCode.backspace ||
         event.keyCode === Utils.keyCode.del) {
         let {cellName} = Utils.getCellCoordinates(event);
         delete cls.cellsList[cellName];
+        input.dispatchEvent(new Event('input'));
         event.target.innerHTML = "";
         synchronize();
       }
@@ -305,6 +262,47 @@ export default class Sheet {
             break;
         }
       }
+    }
+  }
+
+  addRows(rows = 1) {
+    let cls = this
+    for (let i = 0; i < rows; i++) {
+      let row = cls.tbody.insertRow(-1);
+      insertRowHeader();
+      cls._currentRows++;
+
+      for (let j = 0; j < cls._currentColumns; j++) {
+        let cell = row.insertCell(-1);
+        cell.classList.add("data-cell");
+        cell.tabIndex = cls._currentRows + "";
+      }
+    }
+
+    function insertRowHeader() {
+      cls.rowHeaderList.appendChild(document.createElement("li"));
+    }
+  }
+
+  addColumns(columns = 1) {
+    let cls = this;
+    let rowList = cls.tbody.querySelectorAll("tr");
+    cls._currentColumns += columns;
+
+    for (let i = 0; i < cls._currentRows; i++) {
+      for (let j = 0; j < columns; j++) {
+        if (i === 0) {
+          insertColHeader();
+        }
+
+        let cell = rowList[i].insertCell(-1);
+        cell.classList.add("data-cell");
+        cell.tabIndex = i + 1 + "";
+      }
+    }
+
+    function insertColHeader() {
+      cls.colHeaderList.appendChild(document.createElement("li"));
     }
   }
 
@@ -340,7 +338,9 @@ export default class Sheet {
     }
   }
 
-  /* Events Handlers */
+  /*
+   *Events Handlers
+   */
   invokeInputHdlr(event) {
     let cls = this;
     let input = cls.inputCell;
@@ -352,26 +352,14 @@ export default class Sheet {
       return;
     }
 
-    let {cellName} = Utils.getCellCoordinates(cls.focusedCell);
-
     if (event.keyCode &&
 
       event.keyCode !== Utils.keyCode.enter) {
       input.value = "";
 
-    } else if (cls.cellsList[cellName]) {
-
-      input.value = cls.cellsList[cellName].value;
-
-      if (input.value[0] === "=") {
-        let {parsedLinks} = Utils.parseExpression(input.value, cls.tbody);
-
-        parsedLinks.forEach((link) => {
-          Utils.getCellCoordinates(link)
-            .findNode(this.tbody)
-            .classList.add("formula-mode-picked-cell");
-        });
-      }
+    } else if (cls.cellsList[cls.focusedCell.name]) {
+      input.value = cls.cellsList[cls.focusedCell.name].value;
+      _pickedCellsSync.call(this);
     }
     else {
       input.value = "";
@@ -394,6 +382,7 @@ export default class Sheet {
 
   consoleInputChangeHdlr() {
     this.inputCell.value = this.formulaBar.inputConsole.value;
+    this.inputCell.dispatchEvent(new Event("input"));
     this.formulaModeToggle();
   }
 
@@ -429,31 +418,25 @@ export default class Sheet {
 
     let input = this.inputCell;
 
-    if (event.target === input) return;
+    if (event.target.nodeName !== "TD") return;
 
     if (input.value.search(Utils.regExp.pickingInputEnding) >= 0) {
       let linkEndingPos = input
         .value
         .search(Utils.regExp.cellLinkEnding);
       let {cellName} = Utils.getCellCoordinates(event);
-      if (linkEndingPos >= 0) {
-        let lastPickName = input.value.slice(linkEndingPos);
-        let {rowIndex, colIndex} = Utils
-          .getCellCoordinates(lastPickName);
-        let lastCellNode = Utils
-          .findCellOnSheet(rowIndex, colIndex, this.tbody);
 
-        lastCellNode.classList.remove("formula-mode-picked-cell");
+      if (linkEndingPos >= 0) {
         input.value = input.value.slice(0, linkEndingPos);
       }
-      event.target.classList.add("formula-mode-picked-cell");
+
       input.value += cellName;
       this.formulaBar.inputConsole.value = input.value;
+      this.inputCell.dispatchEvent(new Event("input"));
     }
   }
 
 }
-
 
 /* private function */
 
@@ -469,6 +452,42 @@ function _initCellFocus() {
 
 function _changeCellFocus(cellNode, className) {
   this.focusedCell = cellNode;
+  this.focusedCell.name = Utils.getCellCoordinates(cellNode).cellName;
   this.focusedCell.classList.add(className);
+}
+
+function _hidePickedCells() {
+  let cls = this;
+  let pickedCellsNodes = cls
+    .tableWrapper
+    .querySelectorAll(".formula-mode-picked-cell");
+
+  for (let i = 0; i < pickedCellsNodes.length; i++) {
+    pickedCellsNodes[i].style.border = "";
+    pickedCellsNodes[i].classList.remove("formula-mode-picked-cell");
+  }
+}
+
+function _pickedCellsSync() {
+  let cls = this;
+  _hidePickedCells.call(cls);
+
+  let colorCounter = 0;
+  if (cls.inputCell.value[0] === "=") {
+
+    let { linksCellNodes, linksCellNames } = Utils.parseExpression(cls.inputCell.value, cls.tbody);
+
+    linksCellNodes.forEach((link, i, arr) => {
+      link.classList.add("formula-mode-picked-cell");
+
+      if (colorCounter >= Utils.pickedCellColors.length) {
+        colorCounter = 0;
+      }
+
+
+      link.style.border = `2px dashed ${Utils.pickedCellColors[colorCounter++]}`
+
+    });
+  }
 }
 

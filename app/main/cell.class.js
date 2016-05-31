@@ -27,6 +27,9 @@ export default class Cell {
   }
 
   set value(value) {
+    if(value && value.charAt(0) === "=") {
+      value = value.toUpperCase();
+    }
     this._value = value;
   }
 

@@ -135,10 +135,6 @@ html,body {
     z-index: 99;
 }
 
-.formula-mode-picked-cell {
-    border: 2px dashed red;
-}
-
 .footer-toolbar {
     background-color: #EBEBEB;
     box-shadow: inset 0 1px 0 0 #fff;
@@ -375,7 +371,7 @@ td {
 input {
     -moz-user-select: element;
     -ms-user-select: element;
-    -webkit-user-select: element;
+    -webkit-user-select: none;
     user-select: element;  
     position: relative;
     margin: 0;
@@ -426,4 +422,21 @@ input:focus {
 .formulas,
 td, li {
     cursor: default;
+}
+
+test {
+    color: #edaf00;
+    color:#ed2bb4;
+    color:#1dd4ed;
+    color:#edb714;
+    color:#41ed1e;
+    color:#385ded;
+    color:#eda1dc;
+    color:#958ded;
+    color:#ed1a7f;
+    color:#a9ed2d;
+    color:#318ced;
+    color:#db6fed;
+    color:#ed6811;
+
 }
