@@ -6,7 +6,12 @@ import firebase from "firebase";
 import editorTemplate from "./editor.template.html!";
 import FormulaBar from './formula-bar.class.js';
 import Sheet from './sheet.class.js';
+import {_editorListeners} from './editor-listeners.js';
 
+let a = console.log.bind(console);
+
+let currentSheetSymbol = Symbol();
+let sheetListSymbol = Symbol();
 
 export default class SheetEditor {
 
@@ -26,87 +31,166 @@ export default class SheetEditor {
     }
 
     this.target.innerHTML = editorTemplate;
+    this.formulaBar = new FormulaBar(this);
 
-    this._currentSheet = null;
-    this.sheetList = [];
+    this[currentSheetSymbol] = null;
+    this[sheetListSymbol] = [];
     this.footerToolbar = document.querySelector(".footer-toolbar");
     this.serverData = null;
 
-    this.start();
-    initListeners.call(this);
+    _start.call(this);
+    _editorListeners.call(this);
   }
 
   get name() {
     return `Editor-for-${this.target.className}-window`;
   }
 
-  start = start;
+  get currentSheet() {
+    return this[currentSheetSymbol];
+  }
 
-  loadSheets = loadSheets;
-
-  loadData = loadData;
-
-  initTable = initTable;
-
-  createSheet = createSheet;
-
-  saveData = saveData;
-
-  addNewSheet = addNewSheet;
-
-  switchSheet = switchSheet;
-
-  deleteSheet = deleteSheet;
-  /* init listeners method
-   initListeners() {
-   let select = this.footerToolbar.querySelector("select"),
-   newSheetButton =
-   this.footerToolbar.querySelector(".new-sheet-button"),
-   sheetBookmarks =
-   this.footerToolbar.querySelector(".sheet-bookmarks"),
-   saveButton = document.getElementsByClassName("menu-button")[1],
-   resetButton = document.getElementsByClassName("menu-button")[2],
-   deleteSheetButton = document.getElementsByClassName("menu-button")[3];
-
-   let switchSheetHandler = (event) => {
-   if (event.target.parentElement.className === "sheet-bookmarks" ||
-   event.target.tagName === "SELECT") {
-   let sheetIndex = event.target.value || parseFloat(event.target.id);
-   this.switchSheet(sheetIndex);
-   }
-   };
-   let resetDataBasesHandler = () => {
-   localStorage.setItem(this.name, "");
-   };
-   let deleteSheetHandler = () => {
-
-   let decision = confirm(
-   `                       Warning!
-
-   Are you shure you want to delete ${this._currentSheet.name}?
-   `
-   );
-   if (!decision) return;
-   let delSheetID = this._currentSheet.ID;
-   this.switchSheet(this._currentSheet.ID - 1);
-   this.deleteSheet(delSheetID);
-   };
-   newSheetButton.addEventListener("click", () => this.addNewSheet());
-   select.addEventListener("change", switchSheetHandler);
-   sheetBookmarks.addEventListener("click", switchSheetHandler);
-   deleteSheetButton.addEventListener("click", deleteSheetHandler);
-   resetButton.addEventListener("click", resetDataBasesHandler);
-   saveButton.addEventListener("click", () => this.saveData());
+  get sheetList() {
+    return this[sheetListSymbol];
+  }
 
 
-   // window.onunload = () => {
-   //     this.saveData();
-   // }
-   }
-   */
+  loadSheets() {
+    let loadedData = this.loadData() || this.serverData;
+    loadedData.forEach(function (item) {
+      _initTable();
+      this.createSheet(item._currentColumns, item._currentRows, true);
+    }, this);
+    this.switchSheet(0);
+  }
+
+  loadData() {
+    return JSON.parse(localStorage.getItem(this.name));
+  }
+
+  createSheet(columns = this.columns,
+              rows = this.rows,
+              loading = false) {
+    let editor,
+      toolbar,
+      sheetID,
+      sheetCellsData,
+      option,
+      sheet,
+      sheetBookmarksList;
+
+    editor = this;
+    toolbar = editor.footerToolbar;
+    sheetID = editor[sheetListSymbol].length;
+    sheetCellsData = {};
+
+    if (loading) {
+      sheetCellsData = editor.loadData() ?
+        editor.loadData()[sheetID].cellsList :
+        editor.serverData[sheetID].cellsList;
+    }
+
+    sheet = new Sheet(columns, rows, sheetID, sheetCellsData, this.formulaBar);
+    editor[currentSheetSymbol] = sheet;
+
+    option = toolbar.querySelector("select > option:last-child");
+    option.setAttribute("value", sheet.ID);
+    option.textContent = sheet.name;
+
+    sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
+    sheetBookmarksList[sheet.ID].id = `${sheet.ID}-sheet-bookmark`;
+    sheetBookmarksList[sheet.ID].textContent = option.textContent;
+
+    editor[sheetListSymbol].push(sheet);
+    //editor.switchSheet(sheet.ID);
+
+    if (!loading) {
+      editor.saveData();
+    }
+  }
+
+  saveData() {
+    let editor = this,
+      sheetsData = [];
+
+    editor[sheetListSymbol].forEach(ForEachCB, editor);
+
+    localStorage.setItem(this.name, JSON.stringify(sheetsData));
+    firebase.database().ref().set(sheetsData);
+
+    function ForEachCB(sheet) {
+      let cellsData = {};
+
+      for (let cell in sheet.cellsList) {
+        cellsData[cell] = {
+          value: sheet.cellsList[cell].value,
+          computedValue: sheet.cellsList[cell].computedValue,
+          colIndex: sheet.cellsList[cell].colIndex,
+          rowIndex: sheet.cellsList[cell].rowIndex
+        };
+      }
+
+      let sheetData = {
+        cellsList: cellsData,
+        currentRows: sheet._currentRows,
+        currentColumns: sheet._currentColumns
+      };
+
+      sheetsData.push(sheetData);
+    }
+  }
+
+  addNewSheet(columns, rows) {
+    _initTable();
+    this.createSheet(columns, rows);
+  }
+
+  switchSheet(sheetIndex) {
+    console.log("sitching sheet");
+    let sheetBookmarksList,
+      sheetSelectList;
+
+    sheetBookmarksList = this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
+    sheetSelectList = this.footerToolbar.querySelectorAll("select > option");
+
+    for (let i = 0; i < this[sheetListSymbol].length; i++) {
+      sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
+      sheetSelectList[i].removeAttribute("selected");
+      this[sheetListSymbol][i].sheetContainer.style.display = "none";
+    }
+
+    sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
+    sheetSelectList[sheetIndex].setAttribute("selected", "true");
+
+    this[currentSheetSymbol].removeListeners();
+    this[currentSheetSymbol] = this[sheetListSymbol][sheetIndex];
+    this[currentSheetSymbol].addListeners();
+    this.formulaBar.switchTargetSheet(this[currentSheetSymbol]);
+    this[currentSheetSymbol].sheetContainer.style.display = "initial";
+  }
+
+  deleteSheet(delSheetIndex) {
+    let sheetBookmarks,
+      sheetBookmarksList,
+      sheetSelect,
+      sheetSelectList,
+      removedSheet;
+
+    sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks");
+    sheetBookmarksList = this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
+    sheetSelect = this.footerToolbar.querySelector("select");
+    sheetSelectList = this.footerToolbar.querySelectorAll("select > option");
+    removedSheet = this[sheetListSymbol].splice(delSheetIndex)[0];
+    this.target.removeChild(removedSheet.sheetContainer);
+    sheetBookmarks.removeChild(sheetBookmarksList[delSheetIndex]);
+    sheetSelect.removeChild(sheetSelectList[delSheetIndex]);
+    this.saveData();
+  }
 }
 
-function start() {
+
+/* Privat functions */
+function _start() {
 
   if (localStorage[`${this.name}`]) {
     this.loadSheets();
@@ -129,21 +213,7 @@ function start() {
 
 
 }
-
-function loadSheets() {
-  let loadedData = this.loadData() || this.serverData;
-  loadedData.forEach(function (item) {
-    this.initTable();
-    this.createSheet(item._currentColumns, item._currentRows, true);
-  }, this);
-  this.switchSheet(0);
-}
-
-function  loadData() {
-  return JSON.parse(localStorage.getItem(this.name));
-}
-
-function initTable() {
+function _initTable() {
   let windowFrame = document.querySelector(".main");
   let sheetContainer =
       windowFrame.appendChild(document.createElement("div")),
@@ -176,162 +246,4 @@ function initTable() {
   select.appendChild(document.createElement("option"));
   let sheetBoormarks = toolbar.querySelector(".sheet-bookmarks");
   sheetBoormarks.appendChild(document.createElement("div"));
-}
-
-function   createSheet(
-  columns = this.columns,
-  rows = this.rows,
-  loading = false
-) {
-  let editor = this;
-  let toolbar = editor.footerToolbar,
-    sheetID = editor.sheetList.length,
-    sheetCellsData = {};
-
-  if (loading) {
-    sheetCellsData = editor.loadData() ?
-      editor.loadData()[sheetID].cellsList :
-      editor.serverData[sheetID].cellsList;
-  }
-
-  let sheet = new Sheet(columns, rows, sheetID, sheetCellsData);
-  editor._currentSheet = sheet;
-
-  let option = toolbar.querySelector("select > option:last-child");
-  option.setAttribute("value", sheet.ID);
-  option.textContent = sheet.name;
-
-  let sheetBookmarksList =
-    toolbar.querySelectorAll(".sheet-bookmarks > div");
-  sheetBookmarksList[sheet.ID].id = `${sheet.ID}-sheet-bookmark`;
-  sheetBookmarksList[sheet.ID].textContent = option.textContent;
-
-  editor.sheetList.push(sheet);
-  editor.switchSheet(sheet.ID);
-
-  if (!loading) {
-    editor.saveData();
-  }
-}
-
-function saveData() {
-  let editor = this;
-  let sheetsData = [];
-  editor.sheetList.forEach(ForEachCB, editor);
-
-  localStorage.setItem(this.name, JSON.stringify(sheetsData));
-  firebase.database().ref().set(sheetsData);
-
-  function ForEachCB(sheet) {
-    let cellsData = {};
-
-    for (let cell in sheet.cellsList) {
-      cellsData[cell] = {
-        value: sheet.cellsList[cell].value,
-        computedValue: sheet.cellsList[cell].computedValue,
-        colIndex: sheet.cellsList[cell].colIndex,
-        rowIndex: sheet.cellsList[cell].rowIndex
-      };
-    }
-
-    let sheetData = {
-      cellsList: cellsData,
-      currentRows: sheet._currentRows,
-      currentColumns: sheet._currentColumns
-    };
-
-    sheetsData.push(sheetData);
-  }
-}
-
-function addNewSheet(columns, rows) {
-  this.initTable();
-  this.createSheet(columns, rows);
-}
-
-function switchSheet(sheetIndex) {
-  let sheetBookmarksList =
-      this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
-    sheetSelectList =
-      this.footerToolbar.querySelectorAll("select > option");
-
-  for (let i = 0; i < this.sheetList.length; i++) {
-    sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
-    sheetSelectList[i].removeAttribute("selected");
-    this.sheetList[i].sheetContainer.style.display = "none";
-  }
-
-  sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
-  sheetSelectList[sheetIndex].setAttribute("selected", "true");
-
-  this._currentSheet = this.sheetList[sheetIndex];
-  this._currentSheet.sheetContainer.style.display = "initial";
-}
-
-function  deleteSheet(delSheetIndex) {
-  let sheetBookmarks =
-      this.footerToolbar.querySelector(".sheet-bookmarks"),
-    sheetBookmarksList =
-      this.footerToolbar.querySelectorAll(".sheet-bookmarks > div"),
-    sheetSelect =
-      this.footerToolbar.querySelector("select"),
-    sheetSelectList =
-      this.footerToolbar.querySelectorAll("select > option"),
-    removedSheet = this.sheetList.splice(delSheetIndex)[0];
-  this.target.removeChild(removedSheet.sheetContainer);
-  sheetBookmarks.removeChild(sheetBookmarksList[delSheetIndex]);
-  sheetSelect.removeChild(sheetSelectList[delSheetIndex]);
-  this.saveData();
-}
-
-
-
-
-/* private functions */
-function initListeners() {
-  console.log("initListeners", this);
-
-  let select = this.footerToolbar.querySelector("select"),
-    newSheetButton =
-      this.footerToolbar.querySelector(".new-sheet-button"),
-    sheetBookmarks =
-      this.footerToolbar.querySelector(".sheet-bookmarks"),
-    saveButton = document.getElementsByClassName("menu-button")[1],
-    resetButton = document.getElementsByClassName("menu-button")[2],
-    deleteSheetButton = document.getElementsByClassName("menu-button")[3];
-
-  let switchSheetHandler = (event) => {
-    if (event.target.parentElement.className === "sheet-bookmarks" ||
-      event.target.tagName === "SELECT") {
-      let sheetIndex = event.target.value || parseFloat(event.target.id);
-      this.switchSheet(sheetIndex);
-    }
-  };
-  let resetDataBasesHandler = () => {
-    localStorage.setItem(this.name, "");
-  };
-  let deleteSheetHandler = () => {
-
-    let decision = confirm(
-      `                       Warning!
-
-Are you shure you want to delete ${this._currentSheet.name}?
-`
-    );
-    if (!decision) return;
-    let delSheetID = this._currentSheet.ID;
-    this.switchSheet(this._currentSheet.ID - 1);
-    this.deleteSheet(delSheetID);
-  };
-  newSheetButton.addEventListener("click", () => this.addNewSheet());
-  select.addEventListener("change", switchSheetHandler);
-  sheetBookmarks.addEventListener("click", switchSheetHandler);
-  deleteSheetButton.addEventListener("click", deleteSheetHandler);
-  resetButton.addEventListener("click", resetDataBasesHandler);
-  saveButton.addEventListener("click", () => this.saveData());
-
-
-  // window.onunload = () => {
-  //     this.saveData();
-  // }
 }

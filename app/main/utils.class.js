@@ -71,20 +71,20 @@ export default class Utils {
   }
 
   static getCellCoordinates(data) {
+
+    let cellInfo = {};
+
     if (data instanceof HTMLElement && data.nodeName === "TD") {
       let cellNode = data;
       let rowIndex = cellNode.parentElement.rowIndex;
       let colIndex = cellNode.cellIndex;
       let cellName = Utils.getCellName(rowIndex, colIndex);
 
-      return {
-        rowIndex: rowIndex,
-        colIndex: colIndex,
-        cellName: cellName
-      }
-    }
+      cellInfo.rowIndex = rowIndex;
+      cellInfo.colIndex = colIndex;
+      cellInfo.cellName = cellName;
 
-    if (typeof data === "object" && data.path) {
+    } else if (typeof data === "object" && data.path) {
       let event = data,
         colIndex,
         rowIndex,
@@ -100,22 +100,26 @@ export default class Utils {
 
       cellName = Utils.getCellName(rowIndex, colIndex);
 
-      return {
-        rowIndex: rowIndex,
-        colIndex: colIndex,
-        cellName: cellName
-      };
-    }
+      cellInfo.rowIndex = rowIndex;
+      cellInfo.colIndex = colIndex;
+      cellInfo.cellName = cellName;
 
-    if (typeof data === "string") {
+    } else if (typeof data === "string") {
       let cellNameArr = data.match(Utils.regExp.cellLinkParts);
       let rowIndex = cellNameArr[1] - 1;
       let colIndex = Utils.getNumberFromName(cellNameArr[0]);
-      return {
-        rowIndex: rowIndex,
-        colIndex: colIndex
-      };
+
+
+      cellInfo.rowIndex = rowIndex;
+      cellInfo.colIndex = colIndex;
+      cellInfo.cellName = data;
     }
+
+    cellInfo.findNode = function (tbody) {
+      return Utils.findCellOnSheet(cellInfo.rowIndex, cellInfo.colIndex, tbody);
+    }
+
+    return cellInfo;
   }
 
   static parseExpression(inputExp, tbody) {

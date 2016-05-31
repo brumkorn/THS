@@ -124,7 +124,7 @@ html,body {
     top:0;
     left: 40px;
     right: 0;
-    overflow: none;
+    overflow: hidden;
 }
 
 .footer-toolbar-align {
@@ -147,8 +147,6 @@ html,body {
     padding-left: 40px;
     padding-bottom: 10px;
 }
-
-
 
 .footer-toolbar > div {
     float: left;
