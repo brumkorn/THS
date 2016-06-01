@@ -34,19 +34,15 @@ export default class FormulaBar {
         {e: "blur", func: sheet.forcedFormulaModeFocusHdlr.bind(sheet)}
       ];
 
-      cls[listenersCacheSymbol].forEach((listener) => {
+      for(let listener of cls[listenersCacheSymbol]) {
         cls.inputConsole.addEventListener(listener["e"], listener["func"]);
-      });
+      }
     }
 
     function removeListeners() {
-      cls[listenersCacheSymbol].forEach((listener) => {
+      for (let listener of cls[listenersCacheSymbol]) {
         cls.inputConsole.removeEventListener(listener["e"], listener["func"]);
-      });
-    }
-
-    function showCellValueInConsole() {
-
+      }
     }
   }
 

@@ -7,11 +7,13 @@ import Utils from "./utils.class.js";
 export default class Cell {
 
   constructor(rowIndex, colIndex, tbody, value, computedValue) {
-    this.colIndex = colIndex;
     this.rowIndex = rowIndex;
+    this.colIndex = colIndex;
     this.value = value;
-    this.tbody = tbody;
     this.computedValue = computedValue;
+
+    this.tbody = tbody;
+
   }
 
   get cellNode() {
@@ -19,7 +21,7 @@ export default class Cell {
   }
 
   get name() {
-    return `${Utils.getCellName}`;
+    return `${Utils.getCellName(this.rowIndex, this.colIndex)}`;
   }
 
   get value() {

@@ -7,6 +7,9 @@ import InputCell from "./input-cell.class.js";
 
 let a = console.log.bind(console);
 
+let sheetListenersSymbol = Symbol();
+let inputListenersSymbol = Symbol();
+
 export default class Sheet {
   constructor(columns, rows, sheetID, cellsList, formulaBar) {
     this.name = `Sheet${sheetID + 1}`;
@@ -15,27 +18,41 @@ export default class Sheet {
     this._currentColumns = 0;
     this.cellsList = cellsList;
     this.formulaMode = false;
-    this.inputCell = document.createElement("input");
-    //this.editor = editor;
-
-    this.sheetContainer = document.querySelector(".main>div:last-child");
-    this.sheetContainer.id = `sheet-container-${this.ID}`;
-    this.colHeaderList = this.sheetContainer.querySelector(".col-header ol");
-    this.rowHeaderList = this.sheetContainer.querySelector(".row-header ol");
-    this.tableWrapper = this.sheetContainer.querySelector(".table-wrapper");
-    this.tbody = this.tableWrapper.querySelector("tbody");
-    this.rowHeader = this.sheetContainer.querySelector(".row-header");
-    this.colHeader = this.sheetContainer.querySelector(".col-header");
-    this.corner = this.sheetContainer
-      .querySelector(".col-header-wrapper div:first-child");
     this.formulaBar = formulaBar;
-
     this.focusedCell = null;
     this.highlightedHeaders = {
       columns: [],
       rows: []
     };
 
+    /* DOM nodes of the sheet */
+    this.inputCell = document.createElement("input");
+
+    this.sheetContainer = document.querySelector(".main>div:last-child");
+
+    this.sheetContainer.id = `sheet-container-${this.ID}`;
+
+    this.colHeaderList = this.sheetContainer
+      .querySelector(".col-header ol");
+
+    this.rowHeaderList = this.sheetContainer
+      .querySelector(".row-header ol");
+
+    this.tableWrapper = this.sheetContainer
+      .querySelector(".table-wrapper");
+
+    this.tbody = this.tableWrapper.querySelector("tbody");
+
+    this.rowHeader = this.sheetContainer
+      .querySelector(".row-header");
+
+    this.colHeader = this.sheetContainer
+      .querySelector(".col-header");
+
+    this.corner = this.sheetContainer
+      .querySelector(".col-header-wrapper div:first-child");
+
+    /* Runs on initialization */
     this.addRows(rows);
     this.addColumns(columns);
     this.loadCellsData();
@@ -44,229 +61,16 @@ export default class Sheet {
 
 
   addListeners() {
-    this.listenersControl(true);
+    _listenersControl.call(this, true);
   }
 
   removeListeners() {
-    this.listenersControl(false);
-  }
-
-  listenersControl(active = true) {
-    let cls = this;
-    let input, cornerHeight, cornerWidth;
-
-    input = this.inputCell;
-    cornerHeight = parseFloat(window.getComputedStyle(this.corner).height);
-    cornerWidth = parseFloat(window.getComputedStyle(this.corner).width);
-
-    this.tableWrapper.dataListeners = [
-      {e: "scroll", func: pullHeadersHdlr},
-      {e: "scroll", func: dynamicAddCellsHdlr},
-      {e: "focusin", func: focusinCellHdlr},
-      {e: "focusin", func: headersHighlightHdlr},
-      {e: "dblclick", func: this.invokeInputHdlr.bind(this)},
-      {e: "keypress", func: this.invokeInputHdlr.bind(this)},
-      {e: "keydown", func: clearCellDataHdlr},
-      {e: "keydown", func: changeFocusHdlr},
-      {e: "click", func: this.formulaPickCellHdlr.bind(this)}
-    ];
-
-    input.dataListeners = [
-      {e: "blur", func: this.forcedFormulaModeFocusHdlr.bind(this)},
-      {e: "keydown", func: this.inputKeyDoneHdlr.bind(this)},
-      {e: "input", func: inputValueChangeHdlr}
-    ];
-
-    if (typeof active === "boolean" && active) {
-      this.tableWrapper.dataListeners.forEach((listener) => {
-        this.tableWrapper.addEventListener(listener["e"], listener["func"]);
-      }, this);
-
-      input.dataListeners.forEach((listener) => {
-        input.addEventListener(listener["e"], listener["func"]);
-      });
-    }
-
-    if (typeof active === "boolean" && !active) {
-      this.tableWrapper.dataListeners.forEach((listener) => {
-        this.tableWrapper.removeEventListener(listener["e"], listener["func"]);
-      }, this);
-
-      input.dataListeners.forEach((listener) => {
-        input.removeEventListener(listener["e"], listener["func"]);
-      });
-    }
-
-    function inputDone() {
-      if (cls.formulaMode === true) return;
-
-      let {rowIndex, colIndex, cellName} = Utils
-        .getCellCoordinates(input.parentNode);
-
-      if (input.value === '') {
-        input.parentNode.innerHTML = '';
-        delete cls.cellsList[cellName];
-        return;
-      }
-      if (!cls.cellsList[cellName] && input.value !== "") {
-        cls.cellsList[cellName] =
-          new Cell(rowIndex, colIndex, cls.tbody);
-      }
-
-
-      cls.cellsList[cellName].value = input.value;
-
-      input.parentElement.innerHTML = input.value;
-      synchronize();
-
-      input.value = "";
-      cls.formulaBar.inputConsole.value = input.value;
-      _hidePickedCells.call(cls)
-    }
-
-
-    function synchronize() {
-      for (let cell in cls.cellsList) {
-        let cellOnSheet = cls.cellsList[cell].cellNode;
-        cellOnSheet.innerHTML = cls.cellsList[cell].computedValue;
-      }
-    }
-
-    /* Event handlers */
-
-    function pullHeadersHdlr() {
-      let rowHeader = cls.rowHeader,
-        colHeader = cls.colHeader;
-      rowHeader.style.top =
-        cornerHeight - cls.tableWrapper.scrollTop + "px";
-      colHeader.style.left =
-        cornerWidth - cls.tableWrapper.scrollLeft + "px";
-    }
-
-    function dynamicAddCellsHdlr(event) {
-      let sheet = event.currentTarget,
-        toEdgeOfSheetCols =
-          sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft),
-        toEdgeOfSheetRows =
-          sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
-
-      if (toEdgeOfSheetCols < 200) {
-        cls.addColumns(10);
-      }
-
-      if (toEdgeOfSheetRows < 120) {
-        cls.addRows(10);
-      }
-    }
-
-    function focusinCellHdlr(event) {
-      if (event.target === input) {
-        cls.removeLastFocus();
-        _changeCellFocus.call(cls, input.parentElement, "focused-input-cell");
-      }
-
-      if (cls.formulaMode === true) return;
-
-      if (event.target.tagName === "TD") {
-        if (cls.focusedCell.firstChild === input) {
-          inputDone();
-        }
-        cls.removeLastFocus();
-        _changeCellFocus.call(cls, event.target, "focused-cell");
-
-        cls.formulaBar.translateCellToConsole(cls);
-      }
-    }
-
-    function headersHighlightHdlr(event) {
-      if (cls.formulaMode === true) return;
-
-      let removeHiglighted = () => {
-        for (let item of cls.highlightedHeaders.columns) {
-          item.classList.remove("cell-header-highlight")
-        }
-        cls.highlightedHeaders.columns.length = 0;
-
-        for (let item of cls.highlightedHeaders.rows) {
-          item.classList.remove("cell-header-highlight")
-        }
-        cls.highlightedHeaders.rows.length = 0;
-      };
-
-      if (event.target.tagName === "TD") {
-        removeHiglighted();
-
-        let rowIndex = event.target.parentElement.rowIndex;
-        let colIndex = event.target.cellIndex;
-        cls.rowHeaderList.children[rowIndex]
-          .classList.add("cell-header-highlight");
-        cls.colHeaderList.children[colIndex]
-          .classList.add("cell-header-highlight");
-        cls.highlightedHeaders
-          .rows.push(cls.rowHeaderList.children[rowIndex]);
-        cls.highlightedHeaders
-          .columns.push(cls.colHeaderList.children[colIndex]);
-      }
-    }
-
-    function inputValueChangeHdlr(event) {
-      cls.formulaModeToggle();
-      cls.formulaBar.inputConsole.value = input.value;
-      _pickedCellsSync.call(cls);
-
-    }
-
-    function clearCellDataHdlr(event) {
-      if (event.target.tagName !== "TD") return;
-
-      if (event.keyCode === Utils.keyCode.alt ||
-        event.keyCode === Utils.keyCode.backspace) {
-        event.preventDefault();
-      }
-
-      if (event.target.innerHTML === "") return;
-
-      if (event.keyCode === Utils.keyCode.backspace ||
-        event.keyCode === Utils.keyCode.del) {
-        let {cellName} = Utils.getCellCoordinates(event);
-        delete cls.cellsList[cellName];
-        input.dispatchEvent(new Event('input'));
-        event.target.innerHTML = "";
-        synchronize();
-      }
-    }
-
-    function changeFocusHdlr(event) {
-      if (event.target === input &&
-        Utils.keyCode.arrows.includes(event.keyCode)) {
-        return;
-      }
-      if (Utils.keyCode.arrows.includes(event.keyCode)) {
-        let {rowIndex, colIndex} = Utils.getCellCoordinates(event);
-        event.preventDefault();
-
-        switch (event.keyCode) {
-          case Utils.keyCode.arrowLeft:
-            colIndex = colIndex || 1;
-            Utils.findCellOnSheet(rowIndex, colIndex - 1, cls.tbody).focus();
-            break;
-          case Utils.keyCode.arroRight:
-            Utils.findCellOnSheet(rowIndex, colIndex + 1, cls.tbody).focus();
-            break;
-          case Utils.keyCode.arrowDown:
-            Utils.findCellOnSheet(rowIndex + 1, colIndex, cls.tbody).focus();
-            break;
-          case Utils.keyCode.arrowUp:
-            rowIndex = rowIndex || 1;
-            Utils.findCellOnSheet(rowIndex - 1, colIndex, cls.tbody).focus();
-            break;
-        }
-      }
-    }
+    _listenersControl.call(this, false);
   }
 
   addRows(rows = 1) {
-    let cls = this
+    let cls = this;
+
     for (let i = 0; i < rows; i++) {
       let row = cls.tbody.insertRow(-1);
       insertRowHeader();
@@ -286,11 +90,15 @@ export default class Sheet {
 
   addColumns(columns = 1) {
     let cls = this;
+
     let rowList = cls.tbody.querySelectorAll("tr");
+
     cls._currentColumns += columns;
 
     for (let i = 0; i < cls._currentRows; i++) {
+
       for (let j = 0; j < columns; j++) {
+
         if (i === 0) {
           insertColHeader();
         }
@@ -307,20 +115,32 @@ export default class Sheet {
   }
 
   loadCellsData() {
-    let sheet = this;
-    for (let cell in sheet.cellsList) {
-      let currentCell = sheet.cellsList[cell];
-      sheet.cellsList[cell] = new Cell(
-        currentCell.rowIndex,
-        currentCell.colIndex,
-        sheet.tbody,
-        currentCell.value,
-        currentCell.computedValue
-      );
-      currentCell = sheet.cellsList[cell];
-      let targetRow = sheet.tbody.children[currentCell.rowIndex];
-      let targetCell = targetRow.children[currentCell.colIndex];
-      targetCell.innerHTML = currentCell._computedValue;
+    let cls = this;
+
+    for (let cell in cls.cellsList) {
+
+      if (cls.cellsList.hasOwnProperty(cell)) {
+        let currentCell,
+          targetRow,
+          targetCell;
+
+        currentCell = cls.cellsList[cell];
+
+        cls.cellsList[cell] = new Cell(
+          currentCell.rowIndex,
+          currentCell.colIndex,
+          cls.tbody,
+          currentCell.value,
+          currentCell.computedValue);
+
+        currentCell = cls.cellsList[cell];
+
+        targetRow = cls.tbody.children[currentCell.rowIndex];
+
+        targetCell = targetRow.children[currentCell.colIndex];
+        targetCell.innerHTML = currentCell._computedValue;
+      }
+
     }
   }
 
@@ -331,6 +151,7 @@ export default class Sheet {
   }
 
   formulaModeToggle(inputDone = false) {
+
     if (inputDone) {
       this.formulaMode = false;
     } else {
@@ -343,6 +164,7 @@ export default class Sheet {
    */
   invokeInputHdlr(event) {
     let cls = this;
+
     let input = cls.inputCell;
 
     if (cls.formulaMode ||
@@ -374,7 +196,9 @@ export default class Sheet {
   }
 
   consoleFocusHdlr(event) {
+
     if (event.relatedTarget === this.inputCell) return;
+
     this.invokeInputHdlr(event);
     this.removeLastFocus();
     _changeCellFocus.call(this, this.inputCell.parentElement, "focused-input-cell");
@@ -399,14 +223,15 @@ export default class Sheet {
   }
 
   inputKeyDoneHdlr(event) {
+
     if (event.keyCode === Utils.keyCode.enter) {
       let {rowIndex, colIndex} =
         Utils.getCellCoordinates(this.inputCell.parentElement);
 
       this.formulaModeToggle(true);
 
-      let nextFocusCell =
-        Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody);
+      let nextFocusCell = Utils.findCellOnSheet(rowIndex + 1, colIndex, this.tbody);
+
       setTimeout(function () {
         nextFocusCell.focus();
       }, 0);
@@ -414,6 +239,7 @@ export default class Sheet {
   }
 
   formulaPickCellHdlr(event) {
+
     if (!this.formulaMode) return;
 
     let input = this.inputCell;
@@ -424,6 +250,7 @@ export default class Sheet {
       let linkEndingPos = input
         .value
         .search(Utils.regExp.cellLinkEnding);
+
       let {cellName} = Utils.getCellCoordinates(event);
 
       if (linkEndingPos >= 0) {
@@ -441,8 +268,8 @@ export default class Sheet {
 /* private function */
 
 function _initCellFocus() {
-
   let cell = Utils.findCellOnSheet(0, 0, this.tbody);
+
   _changeCellFocus.call(this, cell, "focused-cell");
   this.highlightedHeaders.rows.push(this.rowHeaderList.children[0]);
   this.highlightedHeaders.columns.push(this.colHeaderList.children[0]);
@@ -458,13 +285,12 @@ function _changeCellFocus(cellNode, className) {
 
 function _hidePickedCells() {
   let cls = this;
-  let pickedCellsNodes = cls
-    .tableWrapper
-    .querySelectorAll(".formula-mode-picked-cell");
 
-  for (let i = 0; i < pickedCellsNodes.length; i++) {
-    pickedCellsNodes[i].style.border = "";
-    pickedCellsNodes[i].classList.remove("formula-mode-picked-cell");
+
+  if (!cls.inputCell.formulaPickedCells) return;
+
+  for (let cell of cls.inputCell.formulaPickedCells) {
+    cell.style.border = "";
   }
 }
 
@@ -477,17 +303,249 @@ function _pickedCellsSync() {
 
     let { linksCellNodes, linksCellNames } = Utils.parseExpression(cls.inputCell.value, cls.tbody);
 
-    linksCellNodes.forEach((link, i, arr) => {
-      link.classList.add("formula-mode-picked-cell");
+    cls.inputCell.formulaPickedCells = linksCellNodes;
+
+    for (let link of linksCellNodes) {
 
       if (colorCounter >= Utils.pickedCellColors.length) {
         colorCounter = 0;
       }
 
-
       link.style.border = `2px dashed ${Utils.pickedCellColors[colorCounter++]}`
+    }
+  }
+}
 
-    });
+function _listenersControl(active = true) {
+  let cls = this;
+
+  let input,
+    cornerHeight,
+    cornerWidth;
+
+  input = this.inputCell;
+  cornerHeight = parseFloat(window.getComputedStyle(this.corner).height);
+  cornerWidth = parseFloat(window.getComputedStyle(this.corner).width);
+
+  this[sheetListenersSymbol] = [
+    {e: "scroll", func: pullHeadersHdlr},
+    {e: "scroll", func: dynamicAddCellsHdlr},
+    {e: "focusin", func: focusinCellHdlr},
+    {e: "focusin", func: headersHighlightHdlr},
+    {e: "dblclick", func: this.invokeInputHdlr.bind(this)},
+    {e: "keypress", func: this.invokeInputHdlr.bind(this)},
+    {e: "keydown", func: clearCellDataHdlr},
+    {e: "keydown", func: changeFocusHdlr},
+    {e: "click", func: this.formulaPickCellHdlr.bind(this)}
+  ];
+
+  input[inputListenersSymbol] = [
+    {e: "blur", func: this.forcedFormulaModeFocusHdlr.bind(this)},
+    {e: "keydown", func: this.inputKeyDoneHdlr.bind(this)},
+    {e: "input", func: inputValueChangeHdlr}
+  ];
+
+  if (typeof active === "boolean" && active) {
+
+    for (let {e,func} of this[sheetListenersSymbol]) {
+      this.tableWrapper.addEventListener(e, func);
+    }
+
+    for (let {e, func} of input[inputListenersSymbol]) {
+      input.addEventListener(e, func);
+    }
+  }
+
+  if (typeof active === "boolean" && !active) {
+
+    for (let {e, func} of this[sheetListenersSymbol]) {
+      this.tableWrapper.removeEventListener(e, func);
+    }
+
+    for (let {e, func} of input[inputListenersSymbol]) {
+      input.removeEventListener(e, func);
+    }
+  }
+
+  function inputDone() {
+
+    if (cls.formulaMode === true) return;
+
+    let {rowIndex, colIndex, cellName} = Utils
+      .getCellCoordinates(input.parentNode);
+
+    if (input.value === '') {
+      input.parentNode.innerHTML = '';
+      delete cls.cellsList[cellName];
+      return;
+    }
+
+    if (!cls.cellsList[cellName] && input.value !== "") {
+      cls.cellsList[cellName] = new Cell(rowIndex, colIndex, cls.tbody);
+    }
+
+    cls.cellsList[cellName].value = input.value;
+
+    input.parentElement.innerHTML = input.value;
+    synchronize();
+
+    input.value = "";
+    cls.formulaBar.inputConsole.value = input.value;
+    _hidePickedCells.call(cls)
+  }
+
+  function synchronize() {
+
+    for (let cell in cls.cellsList) {
+
+      if (cls.cellsList.hasOwnProperty(cell)) {
+        let cellOnSheet = cls.cellsList[cell].cellNode;
+        cellOnSheet.innerHTML = cls.cellsList[cell].computedValue;
+      }
+    }
+  }
+
+  /* Event handlers */
+
+  function pullHeadersHdlr() {
+    let rowHeader = cls.rowHeader,
+      colHeader = cls.colHeader;
+    rowHeader.style.top =
+      cornerHeight - cls.tableWrapper.scrollTop + "px";
+    colHeader.style.left =
+      cornerWidth - cls.tableWrapper.scrollLeft + "px";
+  }
+
+  function dynamicAddCellsHdlr(event) {
+    let sheet,
+      toEdgeOfSheetCols,
+      toEdgeOfSheetRows;
+
+    sheet = event.currentTarget;
+    toEdgeOfSheetCols = sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
+    toEdgeOfSheetRows = sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
+
+    if (toEdgeOfSheetCols < 200) {
+      cls.addColumns(10);
+    }
+
+    if (toEdgeOfSheetRows < 120) {
+      cls.addRows(10);
+    }
+  }
+
+  function focusinCellHdlr(event) {
+
+    if (event.target === input) {
+      cls.removeLastFocus();
+      _changeCellFocus.call(cls, input.parentElement, "focused-input-cell");
+    }
+
+    if (cls.formulaMode === true) return;
+
+    if (event.target.tagName === "TD") {
+      if (cls.focusedCell.firstChild === input) {
+        inputDone();
+      }
+      cls.removeLastFocus();
+      _changeCellFocus.call(cls, event.target, "focused-cell");
+
+      cls.formulaBar.translateCellToConsole(cls);
+    }
+  }
+
+  function headersHighlightHdlr(event) {
+
+    if (cls.formulaMode === true) return;
+
+    let removeHiglighted = () => {
+
+      for (let item of cls.highlightedHeaders.columns) {
+        item.classList.remove("cell-header-highlight")
+      }
+      cls.highlightedHeaders.columns.length = 0;
+
+      for (let item of cls.highlightedHeaders.rows) {
+        item.classList.remove("cell-header-highlight")
+      }
+      cls.highlightedHeaders.rows.length = 0;
+    };
+
+    if (event.target.tagName === "TD") {
+      removeHiglighted();
+
+      let rowIndex = event.target.parentElement.rowIndex;
+      let colIndex = event.target.cellIndex;
+      cls.rowHeaderList.children[rowIndex]
+        .classList.add("cell-header-highlight");
+      cls.colHeaderList.children[colIndex]
+        .classList.add("cell-header-highlight");
+      cls.highlightedHeaders
+        .rows.push(cls.rowHeaderList.children[rowIndex]);
+      cls.highlightedHeaders
+        .columns.push(cls.colHeaderList.children[colIndex]);
+    }
+  }
+
+  function inputValueChangeHdlr() {
+    cls.formulaModeToggle();
+    cls.formulaBar.inputConsole.value = input.value;
+    _pickedCellsSync.call(cls);
+  }
+
+  function clearCellDataHdlr(event) {
+
+    if (event.target.tagName !== "TD") return;
+
+    if (event.keyCode === Utils.keyCode.alt ||
+      event.keyCode === Utils.keyCode.backspace) {
+      event.preventDefault();
+    }
+
+    if (event.target.innerHTML === "") return;
+
+    if (event.keyCode === Utils.keyCode.backspace ||
+      event.keyCode === Utils.keyCode.del) {
+
+      let {cellName} = Utils.getCellCoordinates(event);
+
+      delete cls.cellsList[cellName];
+
+      input.dispatchEvent(new Event('input'));
+      event.target.innerHTML = "";
+      synchronize();
+    }
+  }
+
+  function changeFocusHdlr(event) {
+
+    if (event.target === input &&
+      Utils.keyCode.arrows.includes(event.keyCode)) {
+      return;
+    }
+
+    if (Utils.keyCode.arrows.includes(event.keyCode)) {
+      let {rowIndex, colIndex} = Utils.getCellCoordinates(event);
+
+      event.preventDefault();
+
+      switch (event.keyCode) {
+        case Utils.keyCode.arrowLeft:
+          colIndex = colIndex || 1;
+          Utils.findCellOnSheet(rowIndex, colIndex - 1, cls.tbody).focus();
+          break;
+        case Utils.keyCode.arroRight:
+          Utils.findCellOnSheet(rowIndex, colIndex + 1, cls.tbody).focus();
+          break;
+        case Utils.keyCode.arrowDown:
+          Utils.findCellOnSheet(rowIndex + 1, colIndex, cls.tbody).focus();
+          break;
+        case Utils.keyCode.arrowUp:
+          rowIndex = rowIndex || 1;
+          Utils.findCellOnSheet(rowIndex - 1, colIndex, cls.tbody).focus();
+          break;
+      }
+    }
   }
 }
 
