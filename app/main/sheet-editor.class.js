@@ -1,13 +1,14 @@
 /**
  * Created by Brumkorn on 27.05.2016.
  */
+let a = console.log.bind(console);
+
 import firebase from "firebase";
 
 import editorTemplate from "./editor.template.html!";
 import FormulaBar from './formula-bar.class.js';
 import Sheet from './sheet.class.js';
 
-let a = console.log.bind(console);
 
 let currentSheetSymbol = Symbol();
 let sheetListSymbol = Symbol();
@@ -109,34 +110,34 @@ export default class SheetEditor {
   }
 
   saveData() {
-    let editor = this,
+    let cls = this,
       sheetsData = [];
 
-    editor[sheetListSymbol].forEach(ForEachCB, editor);
-
-    localStorage.setItem(this.name, JSON.stringify(sheetsData));
-    firebase.database().ref().set(sheetsData);
-
-    function ForEachCB(sheet) {
+    for (let sheet of cls[sheetListSymbol]) {
       let cellsData = {};
 
       for (let cell in sheet.cellsList) {
-        cellsData[cell] = {
-          value: sheet.cellsList[cell].value,
-          computedValue: sheet.cellsList[cell].computedValue,
-          colIndex: sheet.cellsList[cell].colIndex,
-          rowIndex: sheet.cellsList[cell].rowIndex
-        };
+        if (sheet.cellsList.hasOwnProperty(cell)) {
+          cellsData[cell] = {
+            value: sheet.cellsList[cell].value,
+            computedValue: sheet.cellsList[cell].computedValue,
+            colIndex: sheet.cellsList[cell].colIndex,
+            rowIndex: sheet.cellsList[cell].rowIndex
+          };
+        }
       }
 
       let sheetData = {
         cellsList: cellsData,
-        currentRows: sheet._currentRows,
-        currentColumns: sheet._currentColumns
+        currentRows: sheet.currentRows,
+        currentColumns: sheet.currentColumns
       };
 
       sheetsData.push(sheetData);
     }
+
+    localStorage.setItem(this.name, JSON.stringify(sheetsData));
+    firebase.database().ref().set(sheetsData);
   }
 
   addNewSheet(columns, rows) {
@@ -187,7 +188,7 @@ export default class SheetEditor {
   }
 }
 
-/* Privat functions */
+/* Private functions */
 function _start() {
 
   if (localStorage[`${this.name}`]) {
@@ -198,6 +199,7 @@ function _start() {
   firebase.database().ref().once('value', (snapshot) => {
     this.serverData = snapshot.val();
   }).then(() => {
+    
     if (this.serverData) {
       alert("Loading from server");
       this.loadSheets();
@@ -208,44 +210,55 @@ function _start() {
     localStorage.setItem(this.name, "");
     this.addNewSheet();
   });
-
-
 }
-function _initTable() {
-  let windowFrame = document.querySelector(".main");
-  let sheetContainer =
-      windowFrame.appendChild(document.createElement("div")),
-    tableWrapper =
-      sheetContainer.appendChild(document.createElement("div"));
-  tableWrapper.classList.add("table-wrapper");
 
-  let colHeaderWrapper =
-    sheetContainer
-      .insertBefore(document.createElement("div"), tableWrapper);
-  colHeaderWrapper.classList.add("col-header-wrapper");
+function _initTable() {
+  let windowFrame,
+    sheetContainer,
+    tableWrapper,
+    colHeaderWrapper,
+    colHeader,
+    rowHeader,
+    table,
+    toolbar,
+    select;
+
+  windowFrame = document.querySelector(".main");
+
+  sheetContainer = windowFrame.appendChild(document.createElement("div"));
+
+  colHeaderWrapper = sheetContainer.appendChild(document.createElement("div"));
+
+  rowHeader = sheetContainer.appendChild(document.createElement("div"));
+  rowHeader.appendChild(document.createElement("ol"));
+  
+  tableWrapper = sheetContainer.appendChild(document.createElement("div"));
+  tableWrapper.appendChild(document.createElement("table"))
+    .appendChild(document.createElement("tbody"));
+
   colHeaderWrapper.appendChild(document.createElement("div"));
-  let colHeader =
-    colHeaderWrapper.appendChild(document.createElement("div"));
-  colHeaderWrapper.appendChild(document.createElement("div"));
-  colHeader.classList.add("col-header");
+
+  colHeader = colHeaderWrapper.appendChild(document.createElement("div"));
   colHeader.appendChild(document.createElement("ol"));
 
-  let rowHeader =
-    sheetContainer
-      .insertBefore(document.createElement("div"), tableWrapper);
+  colHeaderWrapper.appendChild(document.createElement("div"));
+
+  toolbar = document.querySelector(".footer-toolbar");
+  toolbar.querySelector(".sheet-bookmarks")
+    .appendChild(document.createElement("div"));
+
+  toolbar.querySelector("select")
+    .appendChild(document.createElement("option"));
+
+  colHeaderWrapper.classList.add("col-header-wrapper");
+  tableWrapper.classList.add("table-wrapper");
+  colHeader.classList.add("col-header");
   rowHeader.classList.add("row-header");
-  rowHeader.appendChild(document.createElement("ol"));
-
-  let table = tableWrapper.appendChild(document.createElement("table"));
-  table.appendChild(document.createElement("tbody"));
-
-  let toolbar = document.querySelector(".footer-toolbar"),
-    select = toolbar.querySelector("select");
-  select.appendChild(document.createElement("option"));
-  let sheetBoormarks = toolbar.querySelector(".sheet-bookmarks");
-  sheetBoormarks.appendChild(document.createElement("div"));
 }
+
 function _editorListeners() {
+  let cls = this;
+
   let select,
     newSheetButton,
     sheetBookmarks,
@@ -253,47 +266,51 @@ function _editorListeners() {
     resetButton,
     deleteSheetButton;
 
-  select = this.footerToolbar.querySelector("select");
-  newSheetButton = this.footerToolbar.querySelector(".new-sheet-button");
-  sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks");
+  select = cls.footerToolbar.querySelector("select");
+  newSheetButton = cls.footerToolbar.querySelector(".new-sheet-button");
+  sheetBookmarks = cls.footerToolbar.querySelector(".sheet-bookmarks");
   saveButton = document.getElementsByClassName("menu-button")[1];
   resetButton = document.getElementsByClassName("menu-button")[2];
   deleteSheetButton = document.getElementsByClassName("menu-button")[3];
 
-  let switchSheetHandler,
-    resetDataBasesHandler,
-    deleteSheetHandler;
-
-  switchSheetHandler = (event) => {
-    if (event.target.parentElement.className === "sheet-bookmarks" ||
-      event.target.tagName === "SELECT") {
-      let sheetIndex = event.target.value || parseFloat(event.target.id);
-      this.switchSheet(sheetIndex);
-    }
-  };
-
-  resetDataBasesHandler = () => {
-    localStorage.setItem(this.name, "");
-  };
-
-  deleteSheetHandler = () => {
-
-    let decision = confirm(
-      `                       Warning!
-
-Are you shure you want to delete ${this._currentSheet.name}?
-`
-    );
-    if (!decision) return;
-    let delSheetID = this._currentSheet.ID;
-    this.switchSheet(this._currentSheet.ID - 1);
-    this.deleteSheet(delSheetID);
-  };
-  newSheetButton.addEventListener("click", () => this.addNewSheet());
+  newSheetButton.addEventListener("click", () => cls.addNewSheet());
   select.addEventListener("change", switchSheetHandler);
   sheetBookmarks.addEventListener("click", switchSheetHandler);
   deleteSheetButton.addEventListener("click", deleteSheetHandler);
   resetButton.addEventListener("click", resetDataBasesHandler);
-  saveButton.addEventListener("click", () => this.saveData());
+  saveButton.addEventListener("click", () => cls.saveData());
 
+  function switchSheetHandler(event) {
+
+    if (event.target.parentElement.className === "sheet-bookmarks" ||
+      event.target.tagName === "SELECT") {
+
+      let sheetIndex = event.target.value || parseFloat(event.target.id);
+      cls.switchSheet(sheetIndex);
+    }
+  }
+
+  function resetDataBasesHandler() {
+    localStorage.setItem(cls.name, "");
+  }
+
+  function deleteSheetHandler() {
+
+    let decision,
+      delSheetID;
+
+    decision = confirm(
+      `                       Warning!
+
+Are you shure you want to delete ${cls.currentSheet.name}?
+`
+    );
+
+    if (!decision) return;
+
+
+    delSheetID = cls.currentSheet.ID;
+    cls.switchSheet(cls.currentSheet.ID - 1);
+    cls.deleteSheet(delSheetID);
+  }
 }

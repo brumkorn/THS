@@ -56,10 +56,10 @@ export default class FormulaBar {
     } else {
       cellValue = sheet.focusedCell.innerHTML;
     }
-
+    
     cls.inputConsole.value = sheet.focusedCell.innerHTML !== "<input>" ?
       cellValue :
-      sheet.inputCell.value;
+      sheet.inputCell.inputNode.value;
   }
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "ths",
-  "version": "1.0.0",
-  "description": "[![Codacy Badge](https://api.codacy.com/project/badge/grade/a4b21679fd2f4554951492ab55e465a8)](https://www.codacy.com/app/brumkorn/THS)",
+  "version": "0.0.5",
+  "description": "Educational project for INSART trainee course",
   "main": "app.js",
   "babel": {
     "presets": [

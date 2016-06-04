@@ -6,18 +6,19 @@ let a = console.log.bind(console);
 export default class Utils {
   static get keyCode() {
     return {
-      enter: 13,
-      backspace: 8,
-      del: 46,
-      shift: 16,
       alt: 18,
-      ctrl: 17,
       arrows: [37, 38, 39, 40],
-      arroRight: 39,
+      arrowRight: 39,
       arrowLeft: 37,
       arrowUp: 38,
       arrowDown: 40,
-      equalSign: 187
+      backspace: 8,
+      ctrl: 17,
+      del: 46,
+      enter: 13,
+      escape: 27,
+      equalSign: 187,
+      shift: 16
     };
   }
 
