@@ -102,7 +102,6 @@ export default class SheetEditor {
     sheetBookmarksList[sheet.ID].textContent = option.textContent;
 
     editor[sheetListSymbol].push(sheet);
-    //editor.switchSheet(sheet.ID);
 
     if (!loading) {
       editor.saveData();

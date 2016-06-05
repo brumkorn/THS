@@ -145,7 +145,7 @@ export default class Sheet {
         targetRow = cls.tbody.children[currentCell.rowIndex];
 
         targetCell = targetRow.children[currentCell.colIndex];
-        targetCell.innerHTML = currentCell._computedValue;
+        targetCell.innerHTML = currentCell.computedValue;
       }
 
     }
@@ -400,10 +400,7 @@ function _listenersControl(active = true) {
     }
 
     cls.cellsList[cellName].value = input.value;
-
-    input.parentElement.innerHTML = input.value;
-    synchronize();
-
+    
     input.value = "";
     cls.formulaBar.inputConsole.value = input.value;
     _hidePickedCells.call(cls)
@@ -421,18 +418,7 @@ function _listenersControl(active = true) {
   //   cls.formulaBar.inputConsole.value = input.value;
   //   _hidePickedCells.call(cls);
   // }
-
-  function synchronize() {
-
-    for (let cell in cls.cellsList) {
-
-      if (cls.cellsList.hasOwnProperty(cell)) {
-        let cellOnSheet = cls.cellsList[cell].cellNode;
-        cellOnSheet.innerHTML = cls.cellsList[cell].computedValue;
-      }
-    }
-  }
-
+  
   /* Event handlers */
 
   function pullHeadersHdlr() {
@@ -540,9 +526,11 @@ function _listenersControl(active = true) {
 
       delete cls.cellsList[cellName];
 
+
       input.dispatchEvent(new Event('input'));
       event.target.innerHTML = "";
-      synchronize();
+      event.target.dispatchEvent(new Event('change'));
+      
     }
   }
 

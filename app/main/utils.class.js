@@ -30,6 +30,7 @@ export default class Utils {
       cellLinkEnding: /([A-Z]+[0-9]+)$/i,
       pickingInputEnding: /([=\+\-\*\/])$|([=\+\-\*\/]+[A-Z]+[0-9]+)$/i,
       validInput: /([A-Z]+[0-9]+)|([0-9]+)|([\+\-\*\/]+)|([\(\)])/gi,
+      invalidInput: /([A-Z]+[^0-9]+)/gi,
       doublePlusesAndMinuses: /([\-]{2})|([\+]{2})/g,
       plusMinus: /(\+\-)|(\-\+)/g
     }
@@ -148,96 +149,41 @@ export default class Utils {
   }
 
   static parseExpression(inputExp, tbody) {
-    let inputArrPattern,
-      cellLinkPattern,
-      inputArr,
-      returnArr,
-      linksNodes,
-      linksNames;
+    let inputArr,
+      inputErrors,
+      parsedInput,
+      linksCellNodes,
+      linksCellNames;
 
-    inputArrPattern = Utils.regExp.validInput;
-    cellLinkPattern = Utils.regExp.cellLink;
-    inputArr = inputExp.match(inputArrPattern) || [];
-    linksNodes = [];
-    linksNames = [];
+    inputArr = inputExp.match(Utils.regExp.validInput) || [];
+    inputErrors = inputExp.match(Utils.regExp.invalidInput) || [];
+    linksCellNodes = [];
+    linksCellNames = [];
 
-    returnArr = inputArr.map(function (current) {
-      let matched = current.match(cellLinkPattern);
+    parsedInput = inputArr.map(function (current) {
+      let matched = current.match(Utils.regExp.cellLink);
 
       if (matched) {
         let cellName = matched[0].toUpperCase();
-        linksNames.push(cellName);
+        linksCellNames.push(cellName);
         let {rowIndex, colIndex} =
           Utils.getCellCoordinates(cellName);
 
 
         let linkNode = Utils.findCellOnSheet(rowIndex, colIndex, tbody);
-        linksNodes.push(linkNode);
+        linksCellNodes.push(linkNode);
 
         return linkNode;
       }
 
       return current
     });
-
+    
     return {
-      parsedInput: returnArr,
-      linksCellNodes: linksNodes,
-      linksCellNames: linksNames
+      parsedInput,
+      linksCellNodes,
+      linksCellNames,
+      inputErrors
     };
-  }
-
-  //TODO get rid of input text like variables
-  static computeValue(inputExp, tbody) {
-    let {parsedInput} = Utils.parseExpression(inputExp, tbody);
-    let expressionStr,
-      operators,
-      doublePlusesAndMinuses,
-      plusMinus;
-
-    expressionStr = "";
-    operators = Utils.regExp.operators;
-    doublePlusesAndMinuses = Utils.regExp.doublePlusesAndMinuses;
-    plusMinus = Utils.regExp.plusMinus;
-
-    for (let i = 0; i < parsedInput.length; i++) {
-      let item = parsedInput[i];
-
-      if (typeof item === "object" || item.search(operators) === -1) {
-        continue;
-      }
-      while (item.length > 1) {
-        if (item.search(doublePlusesAndMinuses) >= 0) {
-          item = item.replace(doublePlusesAndMinuses, "+");
-        }
-
-        if (item.search(plusMinus) >= 0) {
-          item = item.replace(plusMinus, "-")
-        }
-      }
-      parsedInput[i] = item;
-    }
-
-    for (let item of parsedInput) {
-
-      if (typeof item === "object") {
-        expressionStr += item.innerHTML || 0;
-      } else {
-        expressionStr += item;
-      }
-    }
-
-    if (!expressionStr) return "";
-
-    if (expressionStr.charAt(0).search(operators) >= 0) {
-      expressionStr = `${0 + expressionStr}`;
-    }
-    if (expressionStr[expressionStr.length - 1].search(operators) >= 0) {
-      expressionStr = `${expressionStr + 0}`;
-    }
-
-    if (expressionStr.search(Utils.regExp.cellLink) >= 0) return "";
-
-    return eval(expressionStr);
   }
 }
