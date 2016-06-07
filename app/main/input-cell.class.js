@@ -9,6 +9,7 @@ export default class InputCell {
 
   constructor() {
     this[inputNodeSymbol] = document.createElement("input");
+    this[inputNodeSymbol].classList.add("input-cell");
     this[inputListenersSymbol] = []
   }
 

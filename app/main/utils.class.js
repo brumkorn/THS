@@ -18,6 +18,8 @@ export default class Utils {
       enter: 13,
       escape: 27,
       equalSign: 187,
+      keyC: 67,
+      keyV: 86,
       shift: 16
     };
   }
@@ -88,16 +90,20 @@ export default class Utils {
   }
 
   static getCellName(rowIndex, colIndex) {
-    let cellColName = Utils.getNameFromNumber(colIndex);
-    let cellRowName = rowIndex + 1;
-    return cellColName + cellRowName;
+    let cellColName,
+      cellRowName,
+      cellName;
+
+    cellColName = Utils.getNameFromNumber(colIndex);
+    cellRowName = rowIndex + 1;
+    cellName = cellColName + cellRowName;
+    
+    return cellName;
   }
 
   static getCellCoordinates(data) {
 
     let cellInfo = {};
-
-
 
     if (data instanceof HTMLElement && data.nodeName === "TD") {
       let cellNode = data;
@@ -178,7 +184,7 @@ export default class Utils {
 
       return current
     });
-    
+
     return {
       parsedInput,
       linksCellNodes,

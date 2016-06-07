@@ -11,6 +11,9 @@ import InputCell from "./input-cell.class.js";
 let sheetListenersSymbol = Symbol();
 let currentRowsSymbol = Symbol();
 let currentColumnsSymbol = Symbol();
+let copyBufferSymbol = Symbol();
+let areaSelectedNodesSymbol = Symbol();
+let selectingCornerSymbol = Symbol();
 
 export default class Sheet {
   constructor(columns, rows, sheetID, cellsList, formulaBar) {
@@ -18,6 +21,8 @@ export default class Sheet {
     this.ID = sheetID;
     this[currentRowsSymbol] = 0;
     this[currentColumnsSymbol] = 0;
+    this[areaSelectedNodesSymbol] = [];
+    this[copyBufferSymbol] = [];
     this.formulaMode = false;
 
     this.cellsList = cellsList;
@@ -32,6 +37,12 @@ export default class Sheet {
     /* DOM nodes related to the sheet */
     this.sheetContainer = document.querySelector(".main>div:last-child");
 
+    this.rowHeader = this.sheetContainer
+      .querySelector(".row-header");
+
+    this.colHeader = this.sheetContainer
+      .querySelector(".col-header");
+
     this.colHeaderList = this.sheetContainer
       .querySelector(".col-header ol");
 
@@ -43,11 +54,6 @@ export default class Sheet {
 
     this.tbody = this.tableWrapper.querySelector("tbody");
 
-    this.rowHeader = this.sheetContainer
-      .querySelector(".row-header");
-
-    this.colHeader = this.sheetContainer
-      .querySelector(".col-header");
 
     this.corner = this.sheetContainer
       .querySelector(".col-header-wrapper div:first-child");
@@ -58,15 +64,15 @@ export default class Sheet {
     this.loadCellsData();
     _initCellFocus.call(this);
   }
-  
+
   get currentRows() {
     return this[currentRowsSymbol];
   }
-  
+
   get currentColumns() {
     return this[currentColumnsSymbol]
   }
-  
+
   addListeners() {
     _listenersControl.call(this, true);
   }
@@ -91,7 +97,14 @@ export default class Sheet {
     }
 
     function insertRowHeader() {
-      cls.rowHeaderList.appendChild(document.createElement("li"));
+      let li = cls.rowHeaderList
+        .appendChild(document.createElement("li"));
+
+      li.appendChild(document.createElement("span"));
+
+
+      li.appendChild(document.createElement("div"))
+        .classList.add("resizer-horizontal");
     }
   }
 
@@ -117,7 +130,14 @@ export default class Sheet {
     }
 
     function insertColHeader() {
-      cls.colHeaderList.appendChild(document.createElement("li"));
+      let li = cls.colHeaderList
+        .appendChild(document.createElement("li"));
+
+      li.appendChild(document.createElement("span"));
+
+
+      li.appendChild(document.createElement("div"))
+        .classList.add("resizer-vertical");
     }
   }
 
@@ -149,12 +169,6 @@ export default class Sheet {
       }
 
     }
-  }
-
-  removeLastFocus() {
-    this.focusedCell
-      .classList
-      .remove("focused-cell", "focused-input-cell");
   }
 
   formulaModeToggle(inputDone = false) {
@@ -207,7 +221,6 @@ export default class Sheet {
     if (event.relatedTarget === this.inputCell.inputNode) return;
 
     this.invokeInputHdlr(event);
-    this.removeLastFocus();
     _changeCellFocus.call(this, this.inputCell.inputNode.parentElement, "focused-input-cell");
   }
 
@@ -230,7 +243,7 @@ export default class Sheet {
   }
 
   inputKeyDoneHdlr(event) {
-    
+
     // if (event.keyCode === Utils.keyCode.escape) {
     //   this.formulaModeToggle(true);
     //
@@ -294,7 +307,6 @@ export default class Sheet {
 
 function _initCellFocus() {
   let cell = Utils.findCellOnSheet(0, 0, this.tbody);
-
   _changeCellFocus.call(this, cell, "focused-cell");
   this.highlightedHeaders.rows.push(this.rowHeaderList.children[0]);
   this.highlightedHeaders.columns.push(this.colHeaderList.children[0]);
@@ -302,10 +314,40 @@ function _initCellFocus() {
   this.colHeaderList.children[0].classList.add("cell-header-highlight");
 }
 
-function _changeCellFocus(cellNode, className) {
-  this.focusedCell = cellNode;
-  this.focusedCell.name = Utils.getCellCoordinates(cellNode).cellName;
-  this.focusedCell.classList.add(className);
+function _changeCellFocus(cellNode, className = "focused-cell") {
+  let cls = this;
+
+  if (cls.focusedCell) {
+    cls.focusedCell
+      .classList
+      .remove("focused-cell", "focused-input-cell");
+  }
+
+  for (let row of cls[areaSelectedNodesSymbol]) {
+    for (let cellNode of row) {
+      cellNode.classList.remove("area-selected");
+      cellNode.style.border = "";
+    }
+  }
+  cls[areaSelectedNodesSymbol].length = 0;
+
+
+  cls.focusedCell = cellNode;
+  cls.focusedCell.name = Utils.getCellCoordinates(cellNode).cellName;
+  cellNode.classList.add(className);
+  _changeSelectingCorner.call(cls, cellNode)
+
+}
+
+function _changeSelectingCorner(cellNode) {
+  // if (this[selectingCornerSymbol]) {
+  //   this[selectingCornerSymbol]
+  //     .classList
+  //     .remove("selecting-corner");
+  // }
+
+  this[selectingCornerSymbol] = cellNode;
+  // cellNode.classList.add("selecting-corner");
 }
 
 function _hidePickedCells() {
@@ -326,7 +368,7 @@ function _pickedCellsSync() {
   let colorCounter = 0;
   if (cls.inputCell.inputNode.value[0] === "=") {
 
-    let { linksCellNodes, linksCellNames } = Utils.parseExpression(cls.inputCell.inputNode.value, cls.tbody);
+    let {linksCellNodes} = Utils.parseExpression(cls.inputCell.inputNode.value, cls.tbody);
 
     cls.inputCell.inputNode.formulaPickedCells = linksCellNodes;
 
@@ -346,28 +388,94 @@ function _listenersControl(active = true) {
 
   let input,
     cornerHeight,
-    cornerWidth;
+    cornerWidth,
+    selectingListeners,
+    resizingListeners;
 
   input = cls.inputCell.inputNode;
   cornerHeight = parseFloat(window.getComputedStyle(cls.corner).height);
   cornerWidth = parseFloat(window.getComputedStyle(cls.corner).width);
 
+
+
+  selectingListeners = new Map();
+
+  selectingListeners.set("sheetArea", {
+    element: cls.tbody,
+    e: "mouseover",
+    func: mouseSelectAreaHdlr
+  });
+
+  selectingListeners.set("rows", {
+    element: cls.rowHeaderList,
+    e: "mouseover",
+    func: mouseSelectRowsHdlr
+  });
+
+  selectingListeners.set("columns", {
+    element: cls.colHeaderList,
+    e: "mouseover",
+    func: mouseSelectColsHdlr
+  });
+
+  resizingListeners = new Map();
+
+  resizingListeners.set("rows", {
+    element: cls.rowHeaderList,
+    e: "mousemove",
+    func: resizeRowHdlr
+  });
+
+  resizingListeners.set("columns", {
+    element: cls.colHeaderList,
+    e: "mousemove",
+    func: resizeColHdlr
+  });
+
+
+
+
   cls[sheetListenersSymbol] = [
-    {e: "scroll", func: pullHeadersHdlr},
-    {e: "scroll", func: dynamicAddCellsHdlr},
-    {e: "focusin", func: focusinCellHdlr},
-    {e: "focusin", func: headersHighlightHdlr},
-    {e: "dblclick", func: cls.invokeInputHdlr.bind(cls)},
-    {e: "keypress", func: cls.invokeInputHdlr.bind(cls)},
-    {e: "keydown", func: clearCellDataHdlr},
-    {e: "keydown", func: changeFocusHdlr},
-    {e: "click", func: cls.formulaPickCellHdlr.bind(cls)}
+    {element: cls.tableWrapper, e: "scroll", func: pullHeadersHdlr},
+    {element: cls.tbody, e: "scroll", func: dynamicAddCellsHdlr},
+    {element: cls.tbody, e: "focusin", func: focusinCellHdlr},
+    {element: cls.tbody, e: "dblclick", func: cls.invokeInputHdlr.bind(cls)},
+    {element: cls.tbody, e: "keypress", func: cls.invokeInputHdlr.bind(cls)},
+    {element: cls.sheetContainer, e: "keyup", func: copyCellHdlr},
+    {element: cls.sheetContainer, e: "keyup", func: pasteCellHdlr},
+    {element: cls.tbody, e: "keydown", func: clearCellDataHdlr},
+    {element: cls.tbody, e: "keydown", func: keyChangeFocusHdlr},
+    {element: cls.tbody, e: "keydown", func: keySelectAreaHdlr},
+    {element: cls.tbody, e: "click", func: cls.formulaPickCellHdlr.bind(cls)},
+    /* Selecting area by mouse drag */
+    {element: cls.tbody, e: "mousedown", func: initSelectingHdlr},
+    {
+      element: cls.tbody,
+      e: "mouseup",
+      func: finishSelectingHdlr
+    },
+    /* Selecting headers*/
+    {element: cls.rowHeaderList, e: "mousedown", func: initRowSelectingHdlr},
+    {
+      element: cls.rowHeaderList,
+      e: "mouseup",
+      func: finishSelectingHdlr
+    },
+    {element: cls.colHeaderList, e: "mousedown", func: initColSelectingHdlr},
+    {element: cls.colHeaderList, e: "mouseup", func: finishSelectingHdlr},
+
+    {element: cls.corner, e: "click", func: selectAllHdlr},
+
+    {element: cls.colHeaderList, e: "mousedown", func: initColResizeHdlr},
+    {element: cls.rowHeaderList, e: "mousedown", func: initRowResizeHdlr},
+    {element: cls.colHeaderList, e: "mouseup", func: finishResizeHdlr},
+    {element: cls.rowHeaderList, e: "mouseup", func: finishResizeHdlr}
   ];
 
   if (typeof active === "boolean" && active) {
 
-    for (let {e,func} of cls[sheetListenersSymbol]) {
-      cls.tableWrapper.addEventListener(e, func);
+    for (let {element, e, func} of cls[sheetListenersSymbol]) {
+      element.addEventListener(e, func);
     }
 
     cls.inputCell.addListeners(cls);
@@ -384,7 +492,7 @@ function _listenersControl(active = true) {
 
   function inputDone() {
 
-    if (cls.formulaMode === true) return;
+    if (cls.formulaMode) return;
 
     let {rowIndex, colIndex, cellName} = Utils
       .getCellCoordinates(input.parentNode);
@@ -400,7 +508,7 @@ function _listenersControl(active = true) {
     }
 
     cls.cellsList[cellName].value = input.value;
-    
+
     input.value = "";
     cls.formulaBar.inputConsole.value = input.value;
     _hidePickedCells.call(cls)
@@ -418,8 +526,138 @@ function _listenersControl(active = true) {
   //   cls.formulaBar.inputConsole.value = input.value;
   //   _hidePickedCells.call(cls);
   // }
-  
+
+  function selectArea() {
+
+    let focus,
+      corner,
+      tempSelectedNodes,
+      highlightHeaderNodes,
+      firstCell;
+
+    /* Focused cell coords */
+    focus = Utils.getCellCoordinates(cls.focusedCell);
+
+    /* Corner cell coords */
+    corner = Utils.getCellCoordinates(cls[selectingCornerSymbol]);
+
+    tempSelectedNodes = [];
+    highlightHeaderNodes = [];
+    firstCell = {};
+
+    for (let row of cls[areaSelectedNodesSymbol]) {
+      for (let cellNode of row) {
+        cellNode.classList.remove("area-selected");
+        cellNode.style.border = "";
+      }
+    }
+
+    firstCell.rowIndex = focus.rowIndex <= corner.rowIndex ? focus.rowIndex : corner.rowIndex;
+    firstCell.colIndex = focus.colIndex <= corner.colIndex ? focus.colIndex : corner.colIndex;
+
+    for (let i = 0; i <= Math.abs(corner.rowIndex - focus.rowIndex); i++) {
+      tempSelectedNodes.push([]);
+      for (let j = 0; j <= Math.abs(corner.colIndex - focus.colIndex); j++) {
+        let cell = Utils.findCellOnSheet(firstCell.rowIndex + i, firstCell.colIndex + j, cls.tbody);
+        tempSelectedNodes[i].push(cell);
+        cell.classList.add('area-selected');
+
+        if (i === 0) {
+          highlightHeaderNodes.push(cell);
+        }
+        if (i > 0 && j === 0) {
+          highlightHeaderNodes.push(cell);
+        }
+      }
+    }
+
+    if (cls.focusedCell === cls[selectingCornerSymbol]) {
+      cls.focusedCell.classList.remove("area-selected");
+    }
+
+    console.log("tempSelected", tempSelectedNodes);
+
+    highlightHeaders(highlightHeaderNodes);
+    cls[areaSelectedNodesSymbol] = tempSelectedNodes;
+  }
+
+  function makeSelectedBorder() {
+    cls[areaSelectedNodesSymbol].forEach(function (row, i, area) {
+      row.forEach(function (cellNode, j) {
+        if (cellNode === cls.focusedCell) return;
+        if (j === 0) {
+          cellNode.style.borderLeft = "1px double #4c74fa"
+        }
+        if (j === row.length - 1) {
+          cellNode.style.borderRight = "1px solid #4c74fa"
+        }
+        if (i === 0) {
+          cellNode.style.borderTop = "1px double #4c74fa"
+        }
+        if (i === area.length - 1) {
+          cellNode.style.borderBottom = "1px solid #4c74fa"
+        }
+      })
+    });
+  }
+
   /* Event handlers */
+
+  function pasteCellHdlr(event) {
+    if (!event.ctrlKey) return;
+    if (event.keyCode !== Utils.keyCode.keyV || !cls[copyBufferSymbol].length ||
+      event.target.nodeName !== "TD") return;
+    event.preventDefault();
+
+    let {rowIndex: startRow, colIndex: startCol} = Utils.getCellCoordinates(event.target);
+    debugger;
+    cls[copyBufferSymbol].forEach(function (row, i) {
+      row.forEach(function (cellValue, j) {
+        let cellName = Utils.getCellName(startRow + i, startCol + j);
+        if (cellValue.length > 0) {
+          if (!cls.cellsList[cellName]) {
+            cls.cellsList[cellName] = new Cell(startRow + i, startCol + j, cls.tbody);
+          }
+          cls.cellsList[cellName].value = cellValue;
+        }
+      })
+    });
+  }
+
+  function copyCellHdlr(event) {
+    if (!event.ctrlKey) return;
+    console.log("Copy cell handler: ");
+    if (event.keyCode !== Utils.keyCode.keyC) return;
+    event.preventDefault();
+
+
+    let {cellName} = Utils.getCellCoordinates(cls.focusedCell);
+
+    if (!cls[areaSelectedNodesSymbol].length) {
+      if (!cls.cellsList[cellName]) return;
+      cls[copyBufferSymbol] = [[cls.cellsList[cellName].value]];
+      console.log("Copy cell handler: ", cls[copyBufferSymbol]);
+      return
+    }
+
+    let tempBuffer = [];
+    cls[areaSelectedNodesSymbol].forEach(function (row, i) {
+      tempBuffer.push([]);
+      console.log(row);
+      row.forEach(function (cellNode) {
+        let {cellName} = Utils.getCellCoordinates(cellNode);
+        if (cls.cellsList[cellName]) {
+          tempBuffer[i].push(cls.cellsList[cellName].value);
+        } else {
+          tempBuffer[i].push("");
+        }
+      });
+    });
+
+    cls[copyBufferSymbol] = tempBuffer;
+
+    console.log("Copy cell handler: ", cls[copyBufferSymbol]);
+  }
 
   function pullHeadersHdlr() {
     let rowHeader = cls.rowHeader,
@@ -451,11 +689,10 @@ function _listenersControl(active = true) {
   function focusinCellHdlr(event) {
 
     if (event.target === input) {
-      cls.removeLastFocus();
       _changeCellFocus.call(cls, input.parentElement, "focused-input-cell");
     }
 
-    if (cls.formulaMode === true) return;
+    if (cls.formulaMode) return;
 
     if (event.target.tagName === "TD") {
       if (cls.focusedCell.firstChild === input && event.target !== cls.focusedCell) {
@@ -466,18 +703,33 @@ function _listenersControl(active = true) {
       //   // inputCancel();
       // }
 
-      cls.removeLastFocus();
       _changeCellFocus.call(cls, event.target, "focused-cell");
+      highlightHeaders([event.target]);
 
       cls.formulaBar.translateCellToConsole(cls);
     }
   }
 
-  function headersHighlightHdlr(event) {
+  function highlightHeaders(cellNodes) {
 
     if (cls.formulaMode === true) return;
 
-    let removeHiglighted = () => {
+    removeHiglighted();
+
+    for (let cellNode of cellNodes) {
+      let {rowIndex, colIndex} = Utils.getCellCoordinates(cellNode);
+
+      cls.rowHeaderList.children[rowIndex]
+        .classList.add("cell-header-highlight");
+      cls.colHeaderList.children[colIndex]
+        .classList.add("cell-header-highlight");
+      cls.highlightedHeaders
+        .rows.push(cls.rowHeaderList.children[rowIndex]);
+      cls.highlightedHeaders
+        .columns.push(cls.colHeaderList.children[colIndex]);
+    }
+
+    function removeHiglighted() {
 
       for (let item of cls.highlightedHeaders.columns) {
         item.classList.remove("cell-header-highlight")
@@ -488,25 +740,8 @@ function _listenersControl(active = true) {
         item.classList.remove("cell-header-highlight")
       }
       cls.highlightedHeaders.rows.length = 0;
-    };
-
-    if (event.target.tagName === "TD") {
-      removeHiglighted();
-
-      let rowIndex = event.target.parentElement.rowIndex;
-      let colIndex = event.target.cellIndex;
-      cls.rowHeaderList.children[rowIndex]
-        .classList.add("cell-header-highlight");
-      cls.colHeaderList.children[colIndex]
-        .classList.add("cell-header-highlight");
-      cls.highlightedHeaders
-        .rows.push(cls.rowHeaderList.children[rowIndex]);
-      cls.highlightedHeaders
-        .columns.push(cls.colHeaderList.children[colIndex]);
     }
   }
-
-
 
   function clearCellDataHdlr(event) {
 
@@ -530,14 +765,15 @@ function _listenersControl(active = true) {
       input.dispatchEvent(new Event('input'));
       event.target.innerHTML = "";
       event.target.dispatchEvent(new Event('change'));
-      
+
     }
   }
 
-  function changeFocusHdlr(event) {
+  function keyChangeFocusHdlr(event) {
 
     if (event.target === input &&
-      Utils.keyCode.arrows.includes(event.keyCode)) {
+      Utils.keyCode.arrows.includes(event.keyCode) ||
+      event.shiftKey) {
       return;
     }
 
@@ -551,7 +787,7 @@ function _listenersControl(active = true) {
           colIndex = colIndex || 1;
           Utils.findCellOnSheet(rowIndex, colIndex - 1, cls.tbody).focus();
           break;
-        case Utils.keyCode.arroRight:
+        case Utils.keyCode.arrowRight:
           Utils.findCellOnSheet(rowIndex, colIndex + 1, cls.tbody).focus();
           break;
         case Utils.keyCode.arrowDown:
@@ -563,6 +799,239 @@ function _listenersControl(active = true) {
           break;
       }
     }
+  }
+
+  /*Resize handlers */
+
+  function initColResizeHdlr(event) {
+    if (event.target.className !== "resizer-vertical") return;
+    let colIndex,
+      resizableColCell;
+    colIndex = Array.prototype.indexOf.call(cls.colHeaderList.childNodes, event.path[1]);
+    resizableColCell = Utils.findCellOnSheet(0, colIndex, cls.tbody);
+
+    resizingListeners.set("columns", {
+      element: cls.colHeaderList,
+      e: "mousemove",
+      func: resizeColHdlr.bind(null, event, event.path[1].clientWidth, resizableColCell)
+    });
+
+    let {element, e, func} = resizingListeners.get("columns");
+    element.addEventListener(e, func);
+  }
+
+  function initRowResizeHdlr(event) {
+    if (event.target.className !== "resizer-horizontal") return;
+
+    let rowIndex,
+      resizableRowCell;
+    rowIndex = Array.prototype.indexOf.call(cls.rowHeaderList.childNodes, event.path[1]);
+    resizableRowCell = Utils.findCellOnSheet(rowIndex, 0, cls.tbody);
+
+    resizingListeners.set("rows", {
+      element: cls.rowHeaderList,
+      e: "mousemove",
+      func: resizeRowHdlr.bind(null, event, event.path[1].clientHeight, resizableRowCell)
+    });
+
+    let {element, e, func} = resizingListeners.get("rows");
+    element.addEventListener(e, func);
+  }
+
+  function finishResizeHdlr() {
+    if (cls.formulaMode) return;
+    for (let {element, e, func} of resizingListeners.values()) {
+      element.removeEventListener(e, func);
+    }
+
+  }
+
+
+  function resizeColHdlr(sourceEvent, initialWidth, resizableColCell, event) {
+    console.log("resizing col", event, sourceEvent);
+    let resizableLi,
+      newWidth;
+
+    resizableLi = sourceEvent.path[1];
+    newWidth = event.clientX - sourceEvent.clientX + initialWidth;
+
+    resizableColCell.style.minWidth = `${newWidth}px`;
+    resizableColCell.style.maxWidth = `${newWidth}px`;
+    resizableLi.style.minWidth = `${newWidth}px`;
+    resizableLi.style.maxWidth = `${newWidth}px`;
+
+
+    console.log("Change Width to", newWidth, initialWidth);
+  }
+
+  function resizeRowHdlr(sourceEvent, initialHeight, resizableRowCell, event) {
+    console.log("resizing Row", event, sourceEvent);
+    let resizableLi,
+      newHeight;
+
+    resizableLi = sourceEvent.path[1];
+    newHeight = event.clientY - sourceEvent.clientY + initialHeight;
+
+    resizableRowCell.style.height = `${newHeight}px`;
+    resizableRowCell.style.height = `${newHeight}px`;
+    resizableLi.style.minHeight = `${newHeight}px`;
+    resizableLi.style.maxHeight = `${newHeight}px`;
+
+    console.log("Change Height to", newHeight, initialHeight);
+  }
+  /* Selecting highlights */
+
+  function keySelectAreaHdlr(event) {
+
+    if (event.target === input &&
+      Utils.keyCode.arrows.includes(event.keyCode) || !event.shiftKey ||
+      cls.formulaMode) {
+      return;
+    }
+
+    if (Utils.keyCode.arrows.includes(event.keyCode)) {
+      let {rowIndex, colIndex} = Utils.getCellCoordinates(cls[selectingCornerSymbol]);
+
+      event.preventDefault();
+      switch (event.keyCode) {
+        case Utils.keyCode.arrowLeft:
+          colIndex = colIndex || 1;
+          _changeSelectingCorner.call(cls, Utils.findCellOnSheet(rowIndex, colIndex - 1, cls.tbody));
+          break;
+        case Utils.keyCode.arrowRight:
+          _changeSelectingCorner.call(cls, Utils.findCellOnSheet(rowIndex, colIndex + 1, cls.tbody));
+          break;
+        case Utils.keyCode.arrowDown:
+          _changeSelectingCorner.call(cls, Utils.findCellOnSheet(rowIndex + 1, colIndex, cls.tbody));
+          break;
+        case Utils.keyCode.arrowUp:
+          rowIndex = rowIndex || 1;
+          _changeSelectingCorner.call(cls, Utils.findCellOnSheet(rowIndex - 1, colIndex, cls.tbody));
+          break;
+      }
+      selectArea();
+      makeSelectedBorder();
+    }
+  }
+
+  function mouseSelectAreaHdlr(event) {
+    if (cls.formulaMode) return;
+
+    _changeSelectingCorner.call(cls, event.target);
+
+    selectArea();
+  }
+
+  function mouseSelectRowsHdlr(event) {
+    if (cls.formulaMode || event.target.nodeName !== "LI") return;
+    let rowIndex,
+      lastCell;
+
+    console.log("row mouse over", event);
+
+    rowIndex = Array.prototype.indexOf.call(cls.rowHeaderList.childNodes, event.target);
+    lastCell = Utils.findCellOnSheet(rowIndex, cls[currentColumnsSymbol] - 1, cls.tbody);
+
+    _changeSelectingCorner.call(cls, lastCell);
+    selectArea();
+  }
+
+  function mouseSelectColsHdlr(event) {
+    if (cls.formulaMode || event.target.nodeName !== "LI") return;
+    let colIndex,
+      lastCell;
+
+    console.log("row mouse over", event);
+
+    colIndex = Array.prototype.indexOf.call(cls.colHeaderList.childNodes, event.target);
+    lastCell = Utils.findCellOnSheet(cls[currentRowsSymbol] - 1, colIndex, cls.tbody);
+
+    _changeSelectingCorner.call(cls, lastCell);
+    selectArea();
+  }
+
+  function initColSelectingHdlr(event) {
+    if (cls.formulaMode || event.target.nodeName === "DIV") return;
+    let colIndex,
+      focusToNode,
+      lastCell,
+      eventTarget;
+
+    eventTarget = event.target;
+    if (event.target.nodeName !== "LI") {
+      eventTarget = event.path[1]
+    }
+
+    colIndex = Array.prototype.indexOf.call(cls.colHeaderList.childNodes, eventTarget);
+    focusToNode = Utils.findCellOnSheet(0, colIndex, cls.tbody);
+    lastCell = Utils.findCellOnSheet(cls[currentRowsSymbol] - 1, colIndex, cls.tbody);
+
+    _changeCellFocus.call(cls, focusToNode);
+    _changeSelectingCorner.call(cls, lastCell);
+
+    selectArea();
+
+    let {element, e, func} = selectingListeners.get("columns");
+    element.addEventListener(e, func);
+
+  }
+
+  function initRowSelectingHdlr(event) {
+    if (cls.formulaMode || event.target.nodeName === "DIV" ) return;
+    let rowIndex,
+      focusToNode,
+      lastCell,
+      eventTarget;
+
+    eventTarget = event.target
+    if (event.target.nodeName !== "LI") {
+      eventTarget = event.path[1]
+    }
+
+
+    console.log("ROW MOUSE DOWN", event);
+
+    rowIndex = Array.prototype.indexOf.call(cls.rowHeaderList.childNodes, eventTarget);
+    focusToNode = Utils.findCellOnSheet(rowIndex, 0, cls.tbody);
+    lastCell = Utils.findCellOnSheet(rowIndex, cls[currentColumnsSymbol] - 1, cls.tbody);
+
+    _changeCellFocus.call(cls, focusToNode);
+    _changeSelectingCorner.call(cls, lastCell);
+
+    selectArea();
+
+    let {element, e, func} = selectingListeners.get("rows");
+    element.addEventListener(e, func);
+  }
+
+  function initSelectingHdlr() {
+    if (cls.formulaMode) return;
+    let {element, e, func} = selectingListeners.get("sheetArea");
+    element.addEventListener(e, func);
+  }
+
+  function finishSelectingHdlr() {
+    if (cls.formulaMode) return;
+    for (let {element, e, func} of selectingListeners.values()) {
+      element.removeEventListener(e, func);
+    }
+
+    makeSelectedBorder();
+  }
+
+  function selectAllHdlr() {
+    if (cls.formulaMode) return;
+    let firstCell,
+      lastCell;
+
+    firstCell = Utils.findCellOnSheet(0, 0, cls.tbody);
+    lastCell = Utils.findCellOnSheet(cls[currentRowsSymbol] - 1,
+      cls[currentColumnsSymbol] - 1, cls.tbody);
+
+    _changeCellFocus.call(cls, firstCell);
+    _changeSelectingCorner.call(cls, lastCell);
+    selectArea()
+
   }
 }
 

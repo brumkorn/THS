@@ -17,9 +17,11 @@ export default class Cell {
   constructor(rowIndex, colIndex, tbody, value, computedValue) {
     this.rowIndex = rowIndex;
     this.colIndex = colIndex;
+    this[parentSheetNodeSymbol] = tbody;
+
     this[valueSymbol] = value;
     this[computedValueSymbol] = computedValue;
-    this[parentSheetNodeSymbol] = tbody;
+
 
     this[linkedCellNodesSymbol] = [];
     this[linkedListenersCacheSymbol] = [];
