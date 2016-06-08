@@ -36,6 +36,8 @@ export default class Sheet {
 
     /* DOM nodes related to the sheet */
     this.sheetContainer = document.querySelector(".main>div:last-child");
+    this.sheetContainer.classList.add("sheet-container");
+    this.sheetContainer.id = `${this.name}`;
 
     this.rowHeader = this.sheetContainer
       .querySelector(".row-header");
@@ -397,7 +399,6 @@ function _listenersControl(active = true) {
   cornerWidth = parseFloat(window.getComputedStyle(cls.corner).width);
 
 
-
   selectingListeners = new Map();
 
   selectingListeners.set("sheetArea", {
@@ -420,24 +421,9 @@ function _listenersControl(active = true) {
 
   resizingListeners = new Map();
 
-  resizingListeners.set("rows", {
-    element: cls.rowHeaderList,
-    e: "mousemove",
-    func: resizeRowHdlr
-  });
-
-  resizingListeners.set("columns", {
-    element: cls.colHeaderList,
-    e: "mousemove",
-    func: resizeColHdlr
-  });
-
-
-
-
   cls[sheetListenersSymbol] = [
     {element: cls.tableWrapper, e: "scroll", func: pullHeadersHdlr},
-    {element: cls.tbody, e: "scroll", func: dynamicAddCellsHdlr},
+    {element: cls.tableWrapper, e: "scroll", func: dynamicAddCellsHdlr},
     {element: cls.tbody, e: "focusin", func: focusinCellHdlr},
     {element: cls.tbody, e: "dblclick", func: cls.invokeInputHdlr.bind(cls)},
     {element: cls.tbody, e: "keypress", func: cls.invokeInputHdlr.bind(cls)},
@@ -467,9 +453,7 @@ function _listenersControl(active = true) {
     {element: cls.corner, e: "click", func: selectAllHdlr},
 
     {element: cls.colHeaderList, e: "mousedown", func: initColResizeHdlr},
-    {element: cls.rowHeaderList, e: "mousedown", func: initRowResizeHdlr},
-    {element: cls.colHeaderList, e: "mouseup", func: finishResizeHdlr},
-    {element: cls.rowHeaderList, e: "mouseup", func: finishResizeHdlr}
+    {element: cls.rowHeaderList, e: "mousedown", func: initRowResizeHdlr}
   ];
 
   if (typeof active === "boolean" && active) {
@@ -672,7 +656,7 @@ function _listenersControl(active = true) {
     let sheet,
       toEdgeOfSheetCols,
       toEdgeOfSheetRows;
-
+    console.log("dynamic add");
     sheet = event.currentTarget;
     toEdgeOfSheetCols = sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
     toEdgeOfSheetRows = sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
@@ -805,80 +789,129 @@ function _listenersControl(active = true) {
 
   function initColResizeHdlr(event) {
     if (event.target.className !== "resizer-vertical") return;
-    let colIndex,
-      resizableColCell;
-    colIndex = Array.prototype.indexOf.call(cls.colHeaderList.childNodes, event.path[1]);
-    resizableColCell = Utils.findCellOnSheet(0, colIndex, cls.tbody);
+
+    event.target.style.backgroundColor = "#4c74fa";
+    event.target.style.position = "fixed";
+    event.target.style.left = `${event.clientX}px`;
+    console.log("click position", event);
 
     resizingListeners.set("columns", {
-      element: cls.colHeaderList,
+      element: document,
       e: "mousemove",
-      func: resizeColHdlr.bind(null, event, event.path[1].clientWidth, resizableColCell)
+      func: moveResizeHandle.bind(null, event)
     });
 
-    let {element, e, func} = resizingListeners.get("columns");
+    resizingListeners.set("columnsFinish", {
+      element: document,
+      e: "mouseup",
+      func: finishColResizeHdlr.bind(null, event)
+    });
+
+    let element, e, func;
+    ({element, e, func} = resizingListeners.get("columns"));
     element.addEventListener(e, func);
+
+    ({element, e, func} = resizingListeners.get("columnsFinish"));
+    element.addEventListener(e, func);
+
+    function moveResizeHandle(sourceEvent, event) {
+      sourceEvent.target.style.left = `${event.clientX}px`;
+    }
+
+    function finishColResizeHdlr(initialEvent, event) {
+
+      let resizableLi,
+        newWidth,
+        colIndex;
+
+      colIndex = Array.prototype.indexOf.call(cls.colHeaderList.childNodes, initialEvent.path[1]);
+
+      resizableLi = initialEvent.path[1];
+      newWidth = event.clientX - initialEvent.clientX + resizableLi.clientWidth;
+
+      initialEvent.target.style.backgroundColor = "";
+      initialEvent.target.style.position = "static";
+
+      resizableLi.style.minWidth = `${newWidth}px`;
+      resizableLi.style.maxWidth = `${newWidth}px`;
+
+      for ( let i = 0; i < cls[currentRowsSymbol]; i++) {
+        let cell = Utils.findCellOnSheet(i, colIndex, cls.tbody);
+        cell.style.minWidth = `${newWidth}px`;
+        cell.style.maxWidth = `${newWidth}px`;
+      }
+
+      for (let {element, e, func} of resizingListeners.values()) {
+        element.removeEventListener(e, func);
+      }
+    }
   }
 
   function initRowResizeHdlr(event) {
     if (event.target.className !== "resizer-horizontal") return;
 
-    let rowIndex,
-      resizableRowCell;
-    rowIndex = Array.prototype.indexOf.call(cls.rowHeaderList.childNodes, event.path[1]);
-    resizableRowCell = Utils.findCellOnSheet(rowIndex, 0, cls.tbody);
+    event.target.style.backgroundColor = "#4c74fa";
+    event.target.style.position = "fixed";
+    event.target.style.top = `${event.clientY}px`;
+    console.log("click position", event);
 
     resizingListeners.set("rows", {
-      element: cls.rowHeaderList,
+      element: document,
       e: "mousemove",
-      func: resizeRowHdlr.bind(null, event, event.path[1].clientHeight, resizableRowCell)
+      func: moveResizeHandle.bind(null, event)
     });
 
-    let {element, e, func} = resizingListeners.get("rows");
-    element.addEventListener(e, func);
-  }
+    resizingListeners.set("rowsFinish", {
+      element: document,
+      e: "mouseup",
+      func: finishRowResizeHdlr.bind(null, event)
+    });
 
-  function finishResizeHdlr() {
-    if (cls.formulaMode) return;
-    for (let {element, e, func} of resizingListeners.values()) {
-      element.removeEventListener(e, func);
+    let element, e, func;
+    ({element, e, func} = resizingListeners.get("rows"));
+    element.addEventListener(e, func);
+
+    ({element, e, func} = resizingListeners.get("rowsFinish"));
+    element.addEventListener(e, func);
+
+    function moveResizeHandle(sourceEvent, event) {
+      sourceEvent.target.style.top = `${event.clientY}px`;
     }
 
+    function finishRowResizeHdlr(initialEvent, event) {
+
+      let resizableLi,
+        newHeight,
+        rowIndex;
+
+      rowIndex = Array.prototype.indexOf.call(cls.rowHeaderList.childNodes, initialEvent.path[1]);
+
+      resizableLi = initialEvent.path[1];
+      newHeight = event.clientY - initialEvent.clientY + resizableLi.clientHeight;
+
+
+
+      resizableLi.style.height = `${newHeight}px`;
+      resizableLi.style.maxHeight = `${newHeight}px`;
+      resizableLi.style.lineHeight = `${newHeight - Utils.typography.tableHeaderTextHight}px `;
+
+      initialEvent.target.style.backgroundColor = "";
+      initialEvent.target.style.position = "absolute";
+      initialEvent.target.style.top = "";
+      initialEvent.target.style.bottom = 0;
+
+      for ( let i = 0; i < cls[currentColumnsSymbol]; i++) {
+        let cell = Utils.findCellOnSheet(rowIndex, i, cls.tbody);
+        cell.style.height = `${newHeight}px`;
+        // cell.style.maxWidth = `${newHeight}px`;
+      }
+
+      for (let {element, e, func} of resizingListeners.values()) {
+        element.removeEventListener(e, func);
+      }
+    }
   }
 
-
-  function resizeColHdlr(sourceEvent, initialWidth, resizableColCell, event) {
-    console.log("resizing col", event, sourceEvent);
-    let resizableLi,
-      newWidth;
-
-    resizableLi = sourceEvent.path[1];
-    newWidth = event.clientX - sourceEvent.clientX + initialWidth;
-
-    resizableColCell.style.minWidth = `${newWidth}px`;
-    resizableColCell.style.maxWidth = `${newWidth}px`;
-    resizableLi.style.minWidth = `${newWidth}px`;
-    resizableLi.style.maxWidth = `${newWidth}px`;
-
-
-    console.log("Change Width to", newWidth, initialWidth);
-  }
-
-  function resizeRowHdlr(sourceEvent, initialHeight, resizableRowCell, event) {
-    console.log("resizing Row", event, sourceEvent);
-    let resizableLi,
-      newHeight;
-
-    resizableLi = sourceEvent.path[1];
-    newHeight = event.clientY - sourceEvent.clientY + initialHeight;
-
-    resizableRowCell.style.height = `${newHeight}px`;
-    resizableRowCell.style.height = `${newHeight}px`;
-    resizableLi.style.minHeight = `${newHeight}px`;
-    resizableLi.style.maxHeight = `${newHeight}px`;
-
-    console.log("Change Height to", newHeight, initialHeight);
-  }
   /* Selecting highlights */
 
   function keySelectAreaHdlr(event) {

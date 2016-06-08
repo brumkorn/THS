@@ -43,13 +43,12 @@ html, body {
 
 .main-menu-button {
   position: relative;
-  background-color: green;
+  background-color: #4c74fa;
   height: 100%;
   -moz-user-select: none;
   -ms-user-select: none;
   -webkit-user-select: none;
   user-select: none;
-
 }
 
 .main-menu-button img {
@@ -63,20 +62,18 @@ html, body {
 }
 
 .menu-bar {
-  background-color: white;
   height: 100%;
-  padding-left: 3px;
-  padding-top: 34px;
+  padding-top: 30px;
   padding-bottom: 0;
 }
 
-.menu-button {
-  position: relative;
-  display: inline-block;
-  text-align: center;
-  padding: 4px;
-  height: 25px;
-}
+/*.menu-button {*/
+  /*position: relative;*/
+  /*display: inline-block;*/
+  /*text-align: center;*/
+  /*padding: 4px;*/
+  /*height: 25px;*/
+/*}*/
 
 .menu-button:hover {
   background-color: #c5c5c5;
@@ -202,6 +199,7 @@ div.bookmark-current-sheet:hover {
 /*Table*/
 .col-header-wrapper {
   height: 24px;
+  line-height: 20px;
   position: absolute;
   left: 0;
   right: 17px;
@@ -292,6 +290,8 @@ div.bookmark-current-sheet:hover {
 }
 
 .row-header li {
+  /*display: table-cell;*/
+  line-height: 20px;
   text-align: center;
   font-size: 11px;
   height: 24px;
@@ -346,7 +346,8 @@ tr:first-child td {
 td {
   font-size: 11px;
   border: solid 1px #c0c0c0;
-  width: 100px;
+  min-width: 100px;
+  max-width: 100px;
   padding: 0;
   margin: 0;
   overflow: hidden;
@@ -358,7 +359,7 @@ td {
   height: 24px;
   font-size: 15px;
   padding: 0 2px;
-  vertical-align: middle;
+  vertical-align: bottom;
   text-align: right;
 }
 
@@ -394,8 +395,8 @@ input {
 }
 
 input.input-cell {
-  height: inherit;
-  width: inherit;
+  height: 100%;
+  width: 100%;
 }
 
 input:focus {
@@ -451,6 +452,8 @@ td.selecting-corner {
 li div.resizer-vertical {
   height: 100%;
   width: 5px;
+  top: 115px;
+  z-index: 999;
 
 
   float: right;
@@ -466,6 +469,7 @@ li div.resizer-horizontal {
   bottom: 0;
   height: 5px;
   width: 100%;
+  z-index: 999;
 
 }
 

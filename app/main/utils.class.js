@@ -38,6 +38,12 @@ export default class Utils {
     }
   }
 
+  static get typography() {
+    return {
+      tableHeaderTextHight: 4
+    }
+  }
+
   static get pickedCellColors() {
     return [
       "#edaf00",
