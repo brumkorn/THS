@@ -4,7 +4,7 @@
 import Utils from "./utils.class.js";
 import {WrongRangeException, WrongValueException, ThsException}  from "./exceptions/exceptions.js";
 
-
+//todo add saving with value set
 let valueSymbol = Symbol();
 let computedValueSymbol = Symbol();
 let parentSheetNodeSymbol = Symbol();

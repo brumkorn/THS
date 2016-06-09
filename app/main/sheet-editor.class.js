@@ -57,6 +57,7 @@ export default class SheetEditor {
   }
 
   get sheetList() {
+    console.log(this[sheetListSymbol]);
     return this[sheetListSymbol];
   }
 
@@ -107,7 +108,7 @@ export default class SheetEditor {
     sheetBookmarksList = cls.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
     sheetBookmarksList[cls.sheetList.length].querySelector("span.tab-title").textContent = cls[currentSheetSymbol].name;
 
-    cls[sheetListSymbol].push(cls[currentSheetSymbol]);
+    cls.sheetList.push(cls[currentSheetSymbol]);
 
     if (!loading) {
       cls.saveData();
@@ -127,7 +128,7 @@ export default class SheetEditor {
     let cls = this,
       sheetsData = [];
 
-    for (let sheet of cls[sheetListSymbol]) {
+    for (let sheet of cls.sheetList) {
       let cellsData = {};
 
       for (let cell in sheet.cellsList) {
@@ -160,25 +161,23 @@ export default class SheetEditor {
   }
 
   switchSheet(sheetIndex) {
+    console.log(sheetIndex);
     let cls = this;
     let sheetBookmarksList;
 
     sheetBookmarksList = cls.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
 
 
-    for (let i = 0; i < cls[sheetListSymbol].length; i++) {
+    for (let i = 0; i < cls.sheetList.length; i++) {
       sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
-
-      cls[sheetListSymbol][i].sheetContainer.style.display = "none";
+      cls.sheetList[i].sheetContainer.style.display = "none";
     }
 
     sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
 
 
-
-
     cls[currentSheetSymbol].removeListeners();
-    cls[currentSheetSymbol] = cls[sheetListSymbol][sheetIndex];
+    cls[currentSheetSymbol] = cls.sheetList[sheetIndex];
     cls[currentSheetSymbol].addListeners();
     cls.formulaBar.switchTargetSheet(cls[currentSheetSymbol]);
     cls[currentSheetSymbol].sheetContainer.style.display = "initial";
@@ -195,7 +194,7 @@ export default class SheetEditor {
     dropdownSheetsList = cls.footerToolbar.querySelectorAll("#dropdownSheetsList li");
 debugger;
 
-    let [removedSheet] = cls.sheetList.splice(delSheetIndex);
+    let [removedSheet] = cls.sheetList.splice(delSheetIndex, 1);
 
     removedSheet.sheetContainer.remove();
     sheetBookmarksList[delSheetIndex].remove();
@@ -296,34 +295,35 @@ function _editorListeners() {
 
   }
   function switchSheetHdlr(event) {
-    if(event.target.nodeName !== "DIV") return;
-    let list,
-      node,
-      targetSheetIndex,
-      currentSheetIndex;
+    console.log(event);
+    if(event.target.nodeName === "DIV" || event.target.className === "tab-title") {
+      let list,
+        node,
+        targetSheetIndex,
+        currentSheetIndex;
 
-    list = event.path[2].children;
-    node = event.path[1];
+      list = event.path[2].children;
+      node = event.path[1];
 
-    if (event.target.classList.contains("sheet-tab")) {
-      list = event.path[1].children;
-      node = event.path[0];
+      if (event.target.classList.contains("sheet-tab")) {
+        list = event.path[1].children;
+        node = event.path[0];
+      }
+
+      if (event.target.classList.contains("tab-title") ||
+        event.target.classList.contains("caret")) {
+        list = event.path[3].children;
+        node = event.path[2];
+      }
+
+      targetSheetIndex = Array.prototype.indexOf.call(list, node);
+      currentSheetIndex = cls.sheetList.indexOf(cls.currentSheet);
+
+      if (targetSheetIndex !== currentSheetIndex) {
+        cls.switchSheet(targetSheetIndex);
+
+      }
     }
-
-    if (event.target.classList.contains("tab-title") ||
-      event.target.classList.contains("caret")) {
-      list = event.path[3].children;
-      node = event.path[2];
-    }
-
-    targetSheetIndex = Array.prototype.indexOf.call(list, node);
-    currentSheetIndex = cls.sheetList.indexOf(cls.currentSheet);
-
-    if (targetSheetIndex !== currentSheetIndex) {
-      cls.switchSheet(targetSheetIndex);
-
-    }
-
   }
 
   function resetDataBasesHdlr() {

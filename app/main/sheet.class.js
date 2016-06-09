@@ -17,6 +17,7 @@ let selectingCornerSymbol = Symbol();
 export default class Sheet {
   constructor(columns, rows, sheetID, cellsList, formulaBar, editor) {
     this.name = `Sheet${editor.creationCounter}`;
+    this.editor = editor;
     this.id = sheetID;
     this[currentRowsSymbol] = 0;
     this[currentColumnsSymbol] = 0;
