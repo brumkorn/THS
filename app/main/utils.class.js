@@ -1,7 +1,6 @@
 /**
  * Created by Brumkorn on 27.05.2016.
  */
-let a = console.log.bind(console);
 
 export default class Utils {
   static get keyCode() {

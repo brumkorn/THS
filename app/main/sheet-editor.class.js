@@ -1,11 +1,13 @@
 /**
  * Created by Brumkorn on 27.05.2016.
  */
-let a = console.log.bind(console);
+
 
 import firebase from "firebase";
 
-import editorTemplate from "./editor.template.html!";
+import editorTemplate from "./templates/editor.template.html!";
+import sheetContainerTemplate from "./templates/sheet-containter.template.html!"
+import sheetTab from "./templates/sheet-tab.template.html!"
 import FormulaBar from './formula-bar.class.js';
 import Sheet from './sheet.class.js';
 
@@ -16,27 +18,31 @@ let sheetListSymbol = Symbol();
 export default class SheetEditor {
 
   constructor(params) {
-    this.target = document.querySelector("#ths-target");
+
 
     this.columns = Math.abs(26);
     this.rows = Math.abs(50);
 
-    if (params && typeof params === "object") {
-      this.target = params.target;
-      this.maxColls = params.maxColls;
-      this.maxRows = params.maxRows;
-      this.readOnly = params.readOnly;
-      this.columns = Math.abs(params.columns);
-      this.rows = Math.abs(params.rows);
-    }
-
-    this.target.innerHTML = editorTemplate;
-    this.formulaBar = new FormulaBar(this);
-
+    // if (params && typeof params === "object") {
+    //   this.target = params.target;
+    //   this.maxColls = params.maxColls;
+    //   this.maxRows = params.maxRows;
+    //   this.readOnly = params.readOnly;
+    //   this.columns = Math.abs(params.columns);
+    //   this.rows = Math.abs(params.rows);
+    // }
+    this.creationCounter = 0;
     this[currentSheetSymbol] = null;
     this[sheetListSymbol] = [];
-    this.footerToolbar = document.querySelector(".footer-toolbar");
     this.serverData = null;
+
+    this.target = document.querySelector("#ths-target");
+    this.target.innerHTML = editorTemplate;
+    this.formulaBar = new FormulaBar(this);
+    this.toolBar = document.querySelector(".tools-wrapper");
+    this.footerToolbar = document.querySelector(".footer-toolbar");
+
+
 
     _start.call(this);
     _editorListeners.call(this);
@@ -59,7 +65,7 @@ export default class SheetEditor {
     let loadedData = this.loadData() || this.serverData;
     loadedData.forEach(function (item) {
       _initTable();
-      this.createSheet(item._currentColumns, item._currentRows, true);
+      this.createSheet(item.currentColumns, item.currentRows, true);
     }, this);
     this.switchSheet(0);
   }
@@ -71,40 +77,49 @@ export default class SheetEditor {
   createSheet(columns = this.columns,
               rows = this.rows,
               loading = false) {
-    let editor,
-      toolbar,
-      sheetID,
+    let cls = this;
+
+    let sheetID,
       sheetCellsData,
-      option,
       sheet,
       sheetBookmarksList;
 
-    editor = this;
-    toolbar = editor.footerToolbar;
-    sheetID = editor[sheetListSymbol].length;
+
+    sheetID = guid();
     sheetCellsData = {};
 
+    this.creationCounter++;
+
     if (loading) {
-      sheetCellsData = editor.loadData() ?
-        editor.loadData()[sheetID].cellsList :
-        editor.serverData[sheetID].cellsList;
+      sheetCellsData = cls.loadData() ?
+        cls.loadData()[cls.sheetList.length].cellsList :
+        cls.serverData[cls.sheetList.length].cellsList;
     }
 
-    sheet = new Sheet(columns, rows, sheetID, sheetCellsData, this.formulaBar);
-    editor[currentSheetSymbol] = sheet;
+    cls[currentSheetSymbol] = new Sheet(columns, rows, sheetID, sheetCellsData, this.formulaBar, cls);
 
-    option = toolbar.querySelector("select > option:last-child");
-    option.setAttribute("value", sheet.ID);
-    option.textContent = sheet.name;
 
-    sheetBookmarksList = toolbar.querySelectorAll(".sheet-bookmarks > div");
-    sheetBookmarksList[sheet.ID].id = `${sheet.ID}-sheet-bookmark`;
-    sheetBookmarksList[sheet.ID].textContent = option.textContent;
+   cls.footerToolbar
+     .querySelector("#dropdownSheetsList ul")
+     .appendChild(document.createElement("li"))
+     .innerHTML = `<a href="#">${cls[currentSheetSymbol].name}</a>`;
 
-    editor[sheetListSymbol].push(sheet);
+    sheetBookmarksList = cls.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
+    sheetBookmarksList[cls.sheetList.length].querySelector("span.tab-title").textContent = cls[currentSheetSymbol].name;
+
+    cls[sheetListSymbol].push(cls[currentSheetSymbol]);
 
     if (!loading) {
-      editor.saveData();
+      cls.saveData();
+    }
+
+    function guid() {
+      function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+          .toString(16)
+          .substring(1);
+      }
+      return s4() + s4();
     }
   }
 
@@ -145,45 +160,48 @@ export default class SheetEditor {
   }
 
   switchSheet(sheetIndex) {
-    console.log("sitching sheet");
-    let sheetBookmarksList,
-      sheetSelectList;
+    let cls = this;
+    let sheetBookmarksList;
 
-    sheetBookmarksList = this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
-    sheetSelectList = this.footerToolbar.querySelectorAll("select > option");
+    sheetBookmarksList = cls.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
 
-    for (let i = 0; i < this[sheetListSymbol].length; i++) {
+
+    for (let i = 0; i < cls[sheetListSymbol].length; i++) {
       sheetBookmarksList[i].classList.remove("bookmark-current-sheet");
-      sheetSelectList[i].removeAttribute("selected");
-      this[sheetListSymbol][i].sheetContainer.style.display = "none";
+
+      cls[sheetListSymbol][i].sheetContainer.style.display = "none";
     }
 
     sheetBookmarksList[sheetIndex].classList.add("bookmark-current-sheet");
-    sheetSelectList[sheetIndex].setAttribute("selected", "true");
 
-    this[currentSheetSymbol].removeListeners();
-    this[currentSheetSymbol] = this[sheetListSymbol][sheetIndex];
-    this[currentSheetSymbol].addListeners();
-    this.formulaBar.switchTargetSheet(this[currentSheetSymbol]);
-    this[currentSheetSymbol].sheetContainer.style.display = "initial";
+
+
+
+    cls[currentSheetSymbol].removeListeners();
+    cls[currentSheetSymbol] = cls[sheetListSymbol][sheetIndex];
+    cls[currentSheetSymbol].addListeners();
+    cls.formulaBar.switchTargetSheet(cls[currentSheetSymbol]);
+    cls[currentSheetSymbol].sheetContainer.style.display = "initial";
+
   }
 
   deleteSheet(delSheetIndex) {
-    let sheetBookmarks,
-      sheetBookmarksList,
-      sheetSelect,
-      sheetSelectList,
-      removedSheet;
+    let cls = this;
 
-    sheetBookmarks = this.footerToolbar.querySelector(".sheet-bookmarks");
-    sheetBookmarksList = this.footerToolbar.querySelectorAll(".sheet-bookmarks > div");
-    sheetSelect = this.footerToolbar.querySelector("select");
-    sheetSelectList = this.footerToolbar.querySelectorAll("select > option");
-    removedSheet = this[sheetListSymbol].splice(delSheetIndex)[0];
-    this.target.removeChild(removedSheet.sheetContainer);
-    sheetBookmarks.removeChild(sheetBookmarksList[delSheetIndex]);
-    sheetSelect.removeChild(sheetSelectList[delSheetIndex]);
-    this.saveData();
+    let sheetBookmarksList,
+      dropdownSheetsList;
+
+    sheetBookmarksList = cls.footerToolbar.querySelectorAll(".sheet-bookmarks div.sheet-tab");
+    dropdownSheetsList = cls.footerToolbar.querySelectorAll("#dropdownSheetsList li");
+debugger;
+
+    let [removedSheet] = cls.sheetList.splice(delSheetIndex);
+
+    removedSheet.sheetContainer.remove();
+    sheetBookmarksList[delSheetIndex].remove();
+    dropdownSheetsList[delSheetIndex].remove();
+
+    cls.saveData();
   }
 }
 
@@ -214,86 +232,107 @@ function _start() {
 function _initTable() {
   let windowFrame,
     sheetContainer,
-    tableWrapper,
-    colHeaderWrapper,
-    colHeader,
-    rowHeader,
-    table,
-    toolbar,
-    select;
+    toolbar;
 
   windowFrame = document.querySelector(".main");
 
   sheetContainer = windowFrame.appendChild(document.createElement("div"));
 
-  colHeaderWrapper = sheetContainer.appendChild(document.createElement("div"));
-
-  rowHeader = sheetContainer.appendChild(document.createElement("div"));
-  rowHeader.appendChild(document.createElement("ol"));
-  
-  tableWrapper = sheetContainer.appendChild(document.createElement("div"));
-  tableWrapper.appendChild(document.createElement("table"))
-    .appendChild(document.createElement("tbody"));
-
-  colHeaderWrapper.appendChild(document.createElement("div"));
-
-  colHeader = colHeaderWrapper.appendChild(document.createElement("div"));
-  colHeader.appendChild(document.createElement("ol"));
-
-  colHeaderWrapper.appendChild(document.createElement("div"));
+  sheetContainer.innerHTML = sheetContainerTemplate;
 
   toolbar = document.querySelector(".footer-toolbar");
   toolbar.querySelector(".sheet-bookmarks")
-    .appendChild(document.createElement("div"));
+    .appendChild(document.createElement("div")).outerHTML = sheetTab;
 
-  toolbar.querySelector("select")
-    .appendChild(document.createElement("option"));
-
-  colHeaderWrapper.classList.add("col-header-wrapper");
-  tableWrapper.classList.add("table-wrapper");
-  colHeader.classList.add("col-header");
-  rowHeader.classList.add("row-header");
 }
 
 function _editorListeners() {
   let cls = this;
 
   let select,
-    newSheetButton,
+    dropdownSheetsList,
+    addSheetButton,
     sheetBookmarks,
     saveButton,
     resetButton,
     deleteSheetButton;
 
   select = cls.footerToolbar.querySelector("select");
-  newSheetButton = cls.footerToolbar.querySelector(".new-sheet-button");
+  dropdownSheetsList = cls.footerToolbar.querySelector("#dropdownSheetsList ul")
+  addSheetButton = cls.footerToolbar.querySelector("#add-sheet-button");
   sheetBookmarks = cls.footerToolbar.querySelector(".sheet-bookmarks");
-  saveButton = document.getElementsByClassName("menu-button")[1];
-  resetButton = document.getElementsByClassName("menu-button")[2];
-  deleteSheetButton = document.getElementsByClassName("menu-button")[3];
+  saveButton = cls.toolBar.querySelector("div.btn-save");
+  resetButton = cls.toolBar.querySelector("div.btn-reset");
+  deleteSheetButton = cls.toolBar.querySelector("div.btn-delete");
 
-  newSheetButton.addEventListener("click", () => cls.addNewSheet());
-  select.addEventListener("change", switchSheetHandler);
-  sheetBookmarks.addEventListener("click", switchSheetHandler);
-  deleteSheetButton.addEventListener("click", deleteSheetHandler);
-  resetButton.addEventListener("click", resetDataBasesHandler);
+  addSheetButton.addEventListener("click", () => cls.addNewSheet());
+  dropdownSheetsList.addEventListener("click", switchSheetHdlr);
+  sheetBookmarks.addEventListener("click", switchSheetHdlr);
+  sheetBookmarks.addEventListener("click", displayDropdownHdlr);
+  deleteSheetButton.addEventListener("click", deleteSheetHdlr);
+  resetButton.addEventListener("click", resetDataBasesHdlr);
   saveButton.addEventListener("click", () => cls.saveData());
+  document.addEventListener("click", hideDropDownHdlr);
+  sheetBookmarks.addEventListener("click", deleteSheetHdlr);
 
-  function switchSheetHandler(event) {
+  function hideDropDownHdlr() {
+    let isOpen = sheetBookmarks.querySelector(".dropdown-menu.opened");
 
-    if (event.target.parentElement.className === "sheet-bookmarks" ||
-      event.target.tagName === "SELECT") {
-
-      let sheetIndex = event.target.value || parseFloat(event.target.id);
-      cls.switchSheet(sheetIndex);
+    if(isOpen && event.target.className !== "caret") {
+      let dropdowns = sheetBookmarks.querySelectorAll(".dropdown-menu");
+      for (let item of dropdowns) {
+        item.style.display = "none";
+        item.classList.remove("opened");
+      }
     }
   }
 
-  function resetDataBasesHandler() {
-    localStorage.setItem(cls.name, "");
+  function displayDropdownHdlr(event) {
+    if(event.target.className === "caret") {
+      let menu =   event.path[2].querySelector(".dropdown-menu");
+      menu.style.display = "initial";
+      menu.classList.add("opened");
+    }
+
+  }
+  function switchSheetHdlr(event) {
+    if(event.target.nodeName !== "DIV") return;
+    let list,
+      node,
+      targetSheetIndex,
+      currentSheetIndex;
+
+    list = event.path[2].children;
+    node = event.path[1];
+
+    if (event.target.classList.contains("sheet-tab")) {
+      list = event.path[1].children;
+      node = event.path[0];
+    }
+
+    if (event.target.classList.contains("tab-title") ||
+      event.target.classList.contains("caret")) {
+      list = event.path[3].children;
+      node = event.path[2];
+    }
+
+    targetSheetIndex = Array.prototype.indexOf.call(list, node);
+    currentSheetIndex = cls.sheetList.indexOf(cls.currentSheet);
+
+    if (targetSheetIndex !== currentSheetIndex) {
+      cls.switchSheet(targetSheetIndex);
+
+    }
+
   }
 
-  function deleteSheetHandler() {
+  function resetDataBasesHdlr() {
+    localStorage.removeItem(cls.name);
+    firebase.database().ref().set("");
+  }
+
+  function deleteSheetHdlr(event) {
+    if (event.target.className !== "sheet-tab-delete-btn") return;
 
     let decision,
       delSheetID;
@@ -308,8 +347,8 @@ Are you shure you want to delete ${cls.currentSheet.name}?
     if (!decision) return;
 
 
-    delSheetID = cls.currentSheet.ID;
-    cls.switchSheet(cls.currentSheet.ID - 1);
+    delSheetID = cls.sheetList.indexOf(cls.currentSheet);
+    cls.switchSheet(delSheetID - 1);
     cls.deleteSheet(delSheetID);
   }
 }

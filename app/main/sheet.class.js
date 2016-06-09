@@ -1,7 +1,6 @@
 /**
  * Created by Brumkorn on 27.05.2016.
  */
-let a = console.log.bind(console);
 
 import Utils from "./utils.class.js";
 import Cell from "./cell.class.js";
@@ -16,9 +15,9 @@ let areaSelectedNodesSymbol = Symbol();
 let selectingCornerSymbol = Symbol();
 
 export default class Sheet {
-  constructor(columns, rows, sheetID, cellsList, formulaBar) {
-    this.name = `Sheet${sheetID + 1}`;
-    this.ID = sheetID;
+  constructor(columns, rows, sheetID, cellsList, formulaBar, editor) {
+    this.name = `Sheet${editor.creationCounter}`;
+    this.id = sheetID;
     this[currentRowsSymbol] = 0;
     this[currentColumnsSymbol] = 0;
     this[areaSelectedNodesSymbol] = [];
@@ -37,7 +36,7 @@ export default class Sheet {
     /* DOM nodes related to the sheet */
     this.sheetContainer = document.querySelector(".main>div:last-child");
     this.sheetContainer.classList.add("sheet-container");
-    this.sheetContainer.id = `${this.name}`;
+    this.sheetContainer.id = `${this.id}-sheet-container`;
 
     this.rowHeader = this.sheetContainer
       .querySelector(".row-header");
@@ -559,7 +558,6 @@ function _listenersControl(active = true) {
       cls.focusedCell.classList.remove("area-selected");
     }
 
-    console.log("tempSelected", tempSelectedNodes);
 
     highlightHeaders(highlightHeaderNodes);
     cls[areaSelectedNodesSymbol] = tempSelectedNodes;
@@ -610,7 +608,6 @@ function _listenersControl(active = true) {
 
   function copyCellHdlr(event) {
     if (!event.ctrlKey) return;
-    console.log("Copy cell handler: ");
     if (event.keyCode !== Utils.keyCode.keyC) return;
     event.preventDefault();
 
@@ -620,14 +617,12 @@ function _listenersControl(active = true) {
     if (!cls[areaSelectedNodesSymbol].length) {
       if (!cls.cellsList[cellName]) return;
       cls[copyBufferSymbol] = [[cls.cellsList[cellName].value]];
-      console.log("Copy cell handler: ", cls[copyBufferSymbol]);
       return
     }
 
     let tempBuffer = [];
     cls[areaSelectedNodesSymbol].forEach(function (row, i) {
       tempBuffer.push([]);
-      console.log(row);
       row.forEach(function (cellNode) {
         let {cellName} = Utils.getCellCoordinates(cellNode);
         if (cls.cellsList[cellName]) {
@@ -640,7 +635,6 @@ function _listenersControl(active = true) {
 
     cls[copyBufferSymbol] = tempBuffer;
 
-    console.log("Copy cell handler: ", cls[copyBufferSymbol]);
   }
 
   function pullHeadersHdlr() {
@@ -656,7 +650,6 @@ function _listenersControl(active = true) {
     let sheet,
       toEdgeOfSheetCols,
       toEdgeOfSheetRows;
-    console.log("dynamic add");
     sheet = event.currentTarget;
     toEdgeOfSheetCols = sheet.scrollWidth - (sheet.clientWidth + sheet.scrollLeft);
     toEdgeOfSheetRows = sheet.scrollHeight - (sheet.clientHeight + sheet.scrollTop);
@@ -793,7 +786,6 @@ function _listenersControl(active = true) {
     event.target.style.backgroundColor = "#4c74fa";
     event.target.style.position = "fixed";
     event.target.style.left = `${event.clientX}px`;
-    console.log("click position", event);
 
     resizingListeners.set("columns", {
       element: document,
@@ -853,7 +845,6 @@ function _listenersControl(active = true) {
     event.target.style.backgroundColor = "#4c74fa";
     event.target.style.position = "fixed";
     event.target.style.top = `${event.clientY}px`;
-    console.log("click position", event);
 
     resizingListeners.set("rows", {
       element: document,
@@ -960,7 +951,6 @@ function _listenersControl(active = true) {
     let rowIndex,
       lastCell;
 
-    console.log("row mouse over", event);
 
     rowIndex = Array.prototype.indexOf.call(cls.rowHeaderList.childNodes, event.target);
     lastCell = Utils.findCellOnSheet(rowIndex, cls[currentColumnsSymbol] - 1, cls.tbody);
@@ -974,7 +964,6 @@ function _listenersControl(active = true) {
     let colIndex,
       lastCell;
 
-    console.log("row mouse over", event);
 
     colIndex = Array.prototype.indexOf.call(cls.colHeaderList.childNodes, event.target);
     lastCell = Utils.findCellOnSheet(cls[currentRowsSymbol] - 1, colIndex, cls.tbody);
@@ -1022,7 +1011,6 @@ function _listenersControl(active = true) {
     }
 
 
-    console.log("ROW MOUSE DOWN", event);
 
     rowIndex = Array.prototype.indexOf.call(cls.rowHeaderList.childNodes, eventTarget);
     focusToNode = Utils.findCellOnSheet(rowIndex, 0, cls.tbody);

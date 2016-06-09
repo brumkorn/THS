@@ -1,7 +1,7 @@
 /**
  * Created by Brumkorn on 28.05.2016.
  */
-let a = console.log.bind(console);
+
 let inputConsoleSymbol = Symbol();
 let listenersCacheSymbol = Symbol();
 

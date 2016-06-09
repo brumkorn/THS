@@ -61,7 +61,6 @@ export default class Cell {
 //TODO get rid of input text like variables
   computeValue() {
     let cls = this;
-    console.log("Compute value of:", cls.name, cls.cellNode);
     let tempValue,
       linksCellNodes,
       parsedInput,
@@ -106,15 +105,12 @@ export default class Cell {
     function handleLinksSynchronize() {
 
 
-      console.log("Previous listeners state:", cls[linkedListenersCacheSymbol]);
       for (let {cellNode, func} of cls[linkedListenersCacheSymbol]) {
         cellNode.removeEventListener("change", func)
       }
 
       cls[linkedCellNodesSymbol] = linksCellNodes;
-      console.log("Current link state", cls[linkedListenersCacheSymbol]);
       for (let linkCellNode of linksCellNodes ) {
-        console.log("adding listener to:", cls.name);
         cls[linkedListenersCacheSymbol]
           .push({"cellNode" : linkCellNode, "func": linkedCellChangeHdlr, "cellName": cls.name});
         linkCellNode.addEventListener('change', linkedCellChangeHdlr)
@@ -167,7 +163,6 @@ export default class Cell {
           expressionStr += item;
         }
       }
-      console.log("expression to eval is: ", expressionStr === true);
 
       if (expressionStr.charAt(0).search(operators) >= 0) {
         expressionStr = `${0 + expressionStr}`;
